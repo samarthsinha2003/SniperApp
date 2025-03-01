@@ -1,14 +1,23 @@
 import React, { useState, useRef } from "react";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
-import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Button,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Image,
+} from "react-native";
 import * as MediaLibrary from "expo-media-library";
+import { captureRef } from "react-native-view-shot"; // Capture the entire camera + overlay
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
-  const cameraRef = useRef<CameraView>(null); // Correct reference to CameraView
+  const cameraRef = useRef<CameraView>(null); // Camera reference
+  const cameraContainerRef = useRef<View>(null); // View reference for screenshot
 
   if (!permission || !mediaPermission) {
     return <View />;
@@ -44,39 +53,44 @@ export default function CameraScreen() {
   }
 
   async function takePicture() {
-    if (!cameraRef.current) {
-      console.error("CameraView reference is null.");
+    if (!cameraContainerRef.current) {
+      console.error("Camera container reference is null.");
       return;
     }
 
     try {
-      // Take picture using CameraView's takePictureAsync()
-      const photo = await cameraRef.current.takePictureAsync();
+      // Capture the camera view along with the sniper overlay
+      const uri = await captureRef(cameraContainerRef, {
+        format: "jpg",
+        quality: 0.8,
+      });
 
-      if (photo) {
-        console.log("Picture taken:", photo.uri);
-      } else {
-        console.error("Failed to take picture, photo is undefined.");
-      }
+      console.log("Picture taken with overlay:", uri);
 
       // Save the captured image to the gallery
-      if (photo) {
-        const asset = await MediaLibrary.createAssetAsync(photo.uri);
-        console.log("Photo saved at:", asset.uri);
-        alert("Picture saved to gallery!");
-      } else {
-        console.error("Failed to save picture, photo is undefined.");
-      }
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      console.log("Photo saved at:", asset.uri);
+      alert("Picture saved to gallery!");
     } catch (error) {
-      console.error("Error taking picture:", error);
+      console.error("Error capturing image:", error);
     }
   }
 
   return (
     <View style={styles.container}>
-      {/* Attach ref to CameraView */}
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      {/* Wrap the CameraView & Sniper Overlay in a parent View to capture both */}
+      <View ref={cameraContainerRef} style={styles.cameraContainer}>
+        {/* Camera Feed */}
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
+        {/* Sniper Scope Overlay */}
+        <Image
+          source={require("../assets/images/tempsniperlogo.png")}
+          style={styles.sniperScope}
+        />
+      </View>
+
+      {/* UI Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
           <Text style={styles.text}>Flip Camera</Text>
@@ -98,8 +112,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingBottom: 10,
   },
+  cameraContainer: {
+    flex: 1,
+    position: "relative",
+  },
   camera: {
     flex: 1,
+  },
+  sniperScope: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain", // Ensures the sniper scope fits the screen properly
   },
   buttonContainer: {
     flexDirection: "row",
