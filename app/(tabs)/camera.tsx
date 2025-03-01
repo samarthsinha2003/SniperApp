@@ -1,24 +1,40 @@
 import React, { useState } from "react";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import * as MediaLibrary from "expo-media-library";
+import { captureScreen } from "react-native-view-shot"; // Used to capture the camera frame
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] =
+    MediaLibrary.usePermissions();
 
-  if (!permission) {
-    // Camera permissions are still loading
+  if (!permission || !mediaPermission) {
     return <View />;
   }
 
   if (!permission.granted) {
-    // Request camera permission
     return (
       <View style={styles.container}>
         <Text style={styles.message}>
           We need your permission to use the camera
         </Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
+        <Button onPress={requestPermission} title="Grant Camera Permission" />
+      </View>
+    );
+  }
+
+  if (!mediaPermission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>
+          We need your permission to save images
+        </Text>
+        <Button
+          onPress={requestMediaPermission}
+          title="Grant Media Permission"
+        />
       </View>
     );
   }
@@ -28,7 +44,22 @@ export default function CameraScreen() {
   }
 
   async function takePicture() {
-    console.log("Picture taken!"); // For now, just log that the button works
+    try {
+      // Capture the screen
+      const uri = await captureScreen({
+        format: "jpg",
+        quality: 0.8,
+      });
+
+      console.log("Picture taken:", uri);
+
+      // Save the captured image
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      console.log("Photo saved at:", asset.uri);
+      alert("Picture saved to gallery!");
+    } catch (error) {
+      console.error("Error capturing image:", error);
+    }
   }
 
   return (
