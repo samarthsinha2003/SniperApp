@@ -19,11 +19,32 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Dependencies
-        run: npm install  # Added 'run:' to execute the command
-      - name: Build
-        run: npm run build # Added 'run:' to execute the command
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Create env file
+        run: |
+          cat << EOF > .env.production
+          FIREBASE_API_KEY=${{ env.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN=${{ env.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID=${{ env.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET=${{ env.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID=${{ env.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID=${{ env.FIREBASE_APP_ID }}
+          FIREBASE_MEASUREMENT_ID=${{ env.FIREBASE_MEASUREMENT_ID }}
+          EOF
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
