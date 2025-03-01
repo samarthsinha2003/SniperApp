@@ -13,6 +13,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { groupsService, type Group } from "../../services/groups";
 import * as Clipboard from "expo-clipboard";
+import { JoinGroupDialog } from "../../components/JoinGroupDialog";
 
 export default function GroupsScreen() {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ export default function GroupsScreen() {
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showJoinDialog, setShowJoinDialog] = useState(false);
 
   useEffect(() => {
     loadGroups();
@@ -78,24 +80,13 @@ export default function GroupsScreen() {
     }
   };
 
-  const joinGroup = async () => {
-    if (!user) return;
-
-    const inviteCode = await new Promise<string>((resolve) => {
-      Alert.prompt(
-        "Join Group",
-        "Enter the invite code",
-        (code) => resolve(code || ""),
-        "plain-text",
-        ""
-      );
-    });
-
-    if (!inviteCode) return;
+  const handleJoinGroup = async (inviteCode: string) => {
+    if (!user || !inviteCode) return;
 
     try {
       setLoading(true);
       const success = await groupsService.joinGroup(inviteCode, user);
+      setShowJoinDialog(false);
       if (success) {
         await loadGroups();
         Alert.alert("Success", "You have joined the group!");
@@ -122,7 +113,7 @@ export default function GroupsScreen() {
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={[styles.button, styles.joinButton]}
-            onPress={joinGroup}
+            onPress={() => setShowJoinDialog(true)}
           >
             <MaterialIcons name="group-add" size={24} color="white" />
           </TouchableOpacity>
@@ -187,6 +178,12 @@ export default function GroupsScreen() {
           </View>
         ))}
       </ScrollView>
+
+      <JoinGroupDialog
+        visible={showJoinDialog}
+        onClose={() => setShowJoinDialog(false)}
+        onSubmit={handleJoinGroup}
+      />
     </ThemedView>
   );
 }
