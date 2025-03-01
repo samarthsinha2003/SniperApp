@@ -7,13 +7,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { ThemedView } from "../components/ThemedView";
 import { ThemedText } from "../components/ThemedText";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -110,6 +110,20 @@ export default function AuthScreen() {
             </ThemedText>
           </TouchableOpacity>
 
+          {isLogin && (
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={() => {
+                router.push("/reset-password");
+              }}
+              disabled={loading}
+            >
+              <ThemedText style={styles.resetButtonText}>
+                Forgot Password?
+              </ThemedText>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.switchButton}
             onPress={() => {
@@ -168,6 +182,15 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  resetButton: {
+    marginTop: 15,
+    padding: 10,
+  },
+  resetButtonText: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#0066cc",
   },
   switchButton: {
     marginTop: 20,

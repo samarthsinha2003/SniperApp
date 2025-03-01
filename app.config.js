@@ -28,6 +28,12 @@ export default {
   web: {
     bundler: "metro",
     favicon: "./assets/images/favicon.jpeg",
+    build: {
+      babel: {
+        include: ["@expo/vector-icons"],
+      },
+    },
+    externals: ["@expo/vector-icons"],
   },
   extra: {
     firebase: {
