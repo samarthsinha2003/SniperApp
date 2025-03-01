@@ -9,7 +9,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "deploy": "node scripts/set-firebase-env.js && firebase deploy",
+    "deploy:prod": "node scripts/set-firebase-env.js prod && firebase deploy --only hosting,functions -P production"
   },
   "jest": {
     "preset": "jest-expo"
@@ -19,6 +21,7 @@
     "@react-native-firebase/app": "^21.11.0",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "dotenv": "^16.4.7",
     "expo": "~52.0.37",
     "expo-blur": "~14.0.3",
     "expo-camera": "~16.0.17",
