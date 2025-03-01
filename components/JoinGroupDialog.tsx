@@ -5,14 +5,32 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from "react-native";
 import { ThemedText } from "./ThemedText";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 
 interface JoinGroupDialogProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (code: string) => void;
 }
+
+const ModalBackground = ({ children }: { children: React.ReactNode }) => {
+  if (Platform.OS === "ios") {
+    return (
+      <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill}>
+        {children}
+      </BlurView>
+    );
+  }
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.modalBackground]}>
+      {children}
+    </View>
+  );
+};
 
 export function JoinGroupDialog({
   visible,
@@ -34,31 +52,54 @@ export function JoinGroupDialog({
       onRequestClose={onClose}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <ThemedText style={styles.modalText}>Join Group</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={inviteCode}
-            onChangeText={setInviteCode}
-            placeholder="Enter invite code"
-            placeholderTextColor="#666"
-            autoCapitalize="characters"
-          />
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
+        <ModalBackground>
+          <View style={styles.modalWrapper}>
+            <LinearGradient
+              colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+              style={styles.modalView}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <ThemedText>Cancel</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.submitButton]}
-              onPress={handleSubmit}
-            >
-              <ThemedText>Join</ThemedText>
-            </TouchableOpacity>
+              <ThemedText style={styles.modalText}>Join Group</ThemedText>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={inviteCode}
+                  onChangeText={setInviteCode}
+                  placeholder="Enter invite code"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  autoCapitalize="characters"
+                  selectionColor="white"
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.button} onPress={onClose}>
+                  <LinearGradient
+                    colors={[
+                      "rgba(255, 255, 255, 0.2)",
+                      "rgba(255, 255, 255, 0.1)",
+                    ]}
+                    style={styles.buttonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <ThemedText style={styles.buttonText}>Cancel</ThemedText>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+                  <LinearGradient
+                    colors={["#6366f1", "#4f46e5"]}
+                    style={styles.buttonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <ThemedText style={styles.buttonText}>Join</ThemedText>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
           </View>
-        </View>
+        </ModalBackground>
       </View>
     </Modal>
   );
@@ -69,14 +110,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  modalBackground: {
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  modalView: {
-    backgroundColor: "white",
-    borderRadius: 20,
+  modalWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    width: "80%",
+  },
+  modalView: {
+    width: "100%",
     maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
@@ -86,35 +134,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   modalText: {
-    marginBottom: 15,
-    fontSize: 18,
+    marginBottom: 24,
+    fontSize: 24,
     fontWeight: "bold",
+    color: "white",
+  },
+  inputContainer: {
+    width: "100%",
+    marginBottom: 24,
   },
   input: {
     width: "100%",
-    backgroundColor: "#f5f5f5",
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 15,
+    borderRadius: 12,
+    fontSize: 16,
+    color: "white",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "flex-end",
     width: "100%",
+    gap: 12,
   },
   button: {
-    padding: 10,
-    borderRadius: 20,
-    minWidth: 80,
+    borderRadius: 12,
+    overflow: "hidden",
+    minWidth: 100,
+  },
+  buttonGradient: {
+    padding: 14,
     alignItems: "center",
-    marginLeft: 10,
   },
-  cancelButton: {
-    backgroundColor: "#ddd",
-  },
-  submitButton: {
-    backgroundColor: "#4CAF50",
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

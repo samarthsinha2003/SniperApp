@@ -1,48 +1,61 @@
 import React, { useState, useRef } from "react";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import {
-  Button,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
+  useColorScheme,
+  Platform,
 } from "react-native";
-import * as MediaLibrary from "expo-media-library";
-import { captureRef } from "react-native-view-shot"; // Capture the camera + overlay
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { MaterialIcons } from "@expo/vector-icons";
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
-  const [mediaPermission, requestMediaPermission] =
-    MediaLibrary.usePermissions();
-  const cameraContainerRef = useRef<View>(null); // Ref to capture view
-  const cameraRef = useRef<CameraView>(null); // Camera reference
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
-  if (!permission || !mediaPermission) return <View />;
+  if (!permission) {
+    return <View style={styles.container} />;
+  }
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to use the camera
-        </Text>
-        <Button onPress={requestPermission} title="Grant Camera Permission" />
-      </View>
-    );
-  }
-
-  if (!mediaPermission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>
-          We need your permission to save images
-        </Text>
-        <Button
-          onPress={requestMediaPermission}
-          title="Grant Media Permission"
-        />
-      </View>
+      <LinearGradient
+        colors={["#4a00e0", "#8e2de2"]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.permissionContainer}>
+          <MaterialIcons
+            name="camera-alt"
+            size={64}
+            color="white"
+            style={styles.permissionIcon}
+          />
+          <Text style={styles.permissionTitle}>Camera Access Needed</Text>
+          <Text style={styles.permissionMessage}>
+            We need your permission to use the camera to take snipe photos.
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionButton}
+            onPress={requestPermission}
+          >
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              style={styles.permissionButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.permissionButtonText}>Grant Permission</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
     );
   }
 
@@ -51,60 +64,53 @@ export default function CameraScreen() {
   }
 
   async function takePicture() {
-    if (!cameraContainerRef.current) {
-      console.error("Error: Camera container reference is null.");
-      return;
-    }
-
-    try {
-      // Add a slight delay to ensure the camera view is rendered
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Capture the camera view with the sniper overlay
-      const uri = await captureRef(cameraContainerRef, {
-        format: "jpg",
-        quality: 0.8,
-        result: "tmpfile", // Ensures the file is stored properly
-      });
-
-      console.log("Picture taken with overlay:", uri);
-
-      // Save the captured image to the gallery
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      console.log("Photo saved at:", asset.uri);
-      alert("Picture saved to gallery!");
-    } catch (error) {
-      console.error("Error capturing image:", error);
-    }
+    console.log("Picture taken!"); // For now, just log that the button works
   }
+
+  const ButtonBackground = ({ children }: { children: React.ReactNode }) => {
+    if (Platform.OS === "ios") {
+      return (
+        <BlurView intensity={50} tint="dark" style={styles.buttonBlur}>
+          {children}
+        </BlurView>
+      );
+    }
+    return (
+      <View
+        style={[styles.buttonBlur, { backgroundColor: "rgba(0, 0, 0, 0.5)" }]}
+      >
+        {children}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* Attach ref to ensure captureRef() works */}
-      <View
-        ref={cameraContainerRef}
-        collapsable={false}
-        style={styles.cameraContainer}
-      >
-        {/* Camera Feed */}
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      <CameraView style={styles.camera} facing={facing}>
+        <View style={styles.overlay}>
+          <View style={styles.topButtons}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={toggleCameraType}
+            >
+              <ButtonBackground>
+                <MaterialIcons name="flip-camera-ios" size={24} color="white" />
+              </ButtonBackground>
+            </TouchableOpacity>
+          </View>
 
-        {/* Sniper Scope Overlay */}
-        <Image
-          source={require("../../assets/images/tempsniperlogo.png")}
-          style={styles.sniperScope}
-        />
-      </View>
-
-      {/* UI Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
-          <Text style={styles.text}>Flip Camera</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={takePicture}>
-          <Text style={styles.text}>Take Picture</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={takePicture}
+            >
+              <View style={styles.captureOuter}>
+                <View style={styles.captureInner} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </CameraView>
     </View>
   );
 }
@@ -112,45 +118,105 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
   },
-  message: {
-    textAlign: "center",
-    paddingBottom: 10,
-  },
-  cameraContainer: {
+  permissionContainer: {
     flex: 1,
-    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  permissionIcon: {
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  permissionMessage: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  permissionButton: {
+    width: "100%",
+    maxWidth: 300,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  permissionButtonGradient: {
+    padding: 16,
+    alignItems: "center",
+  },
+  permissionButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   camera: {
     flex: 1,
   },
-  sniperScope: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
-  },
-  buttonContainer: {
-    flexDirection: "row",
+  overlay: {
+    flex: 1,
     backgroundColor: "transparent",
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
   },
-  button: {
-    alignItems: "center",
-    backgroundColor: "#00000080",
-    padding: 10,
-    borderRadius: 5,
+  topButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    padding: 16,
   },
-  text: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
+  bottomButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 40,
+  },
+  buttonBlur: {
+    borderRadius: 25,
+    overflow: "hidden",
+    padding: 12,
+  },
+  iconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  captureButton: {
+    width: 80,
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  captureOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  captureInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "white",
+    borderWidth: 2,
+    borderColor: "rgba(0, 0, 0, 0.1)",
   },
 });

@@ -1,9 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import Constants from "expo-constants";
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
+const firebaseConfig = Constants.expoConfig?.extra?.firebase || {
   apiKey: "AIzaSyDBxs3rR1phe43o85uX8Hd9ShNlTSAsE3E",
   authDomain: "sniper-app-8a3c1.firebaseapp.com",
   projectId: "sniper-app-8a3c1",

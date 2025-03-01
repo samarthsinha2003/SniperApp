@@ -6,11 +6,15 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  View,
+  Dimensions,
 } from "react-native";
-import { Stack } from "expo-router";
-import { ThemedView } from "../components/ThemedView";
+import { Stack, router } from "expo-router";
 import { ThemedText } from "../components/ThemedText";
 import { useAuth } from "../contexts/AuthContext";
+import { LinearGradient } from "expo-linear-gradient";
+
+const { width } = Dimensions.get("window");
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -57,77 +61,108 @@ export default function AuthScreen() {
           headerShown: false,
         }}
       />
-      <KeyboardAvoidingView
+      <LinearGradient
+        colors={["#4a00e0", "#8e2de2"]}
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <ThemedView style={styles.content}>
-          <ThemedText style={styles.title}>
-            {isLogin ? "Welcome Back!" : "Create Account"}
-          </ThemedText>
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.content}>
+            <ThemedText style={styles.title}>
+              {isLogin ? "Welcome Back!" : "Create Account"}
+            </ThemedText>
 
-          {!isLogin && (
+            {!isLogin && (
+              <TextInput
+                style={styles.input}
+                placeholder="Name"
+                placeholderTextColor="#9ca3af"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!loading}
+              />
+            )}
+
             <TextInput
               style={styles.input}
-              placeholder="Name"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
+              placeholder="Email"
+              placeholderTextColor="#9ca3af"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
               autoCorrect={false}
               editable={!loading}
             />
-          )}
 
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!loading}
-          />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#9ca3af"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!loading}
-          />
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={["#6366f1", "#4f46e5"]}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isLogin ? "Sign In" : "Sign Up"}
+                </ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <ThemedText style={styles.buttonText}>
-              {isLogin ? "Sign In" : "Sign Up"}
-            </ThemedText>
-          </TouchableOpacity>
+            {isLogin && (
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={() => {
+                  router.push("/reset-password");
+                }}
+                disabled={loading}
+              >
+                <ThemedText style={styles.resetButtonText}>
+                  Forgot Password?
+                </ThemedText>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => {
-              setIsLogin(!isLogin);
-              setEmail("");
-              setPassword("");
-              setName("");
-            }}
-            disabled={loading}
-          >
-            <ThemedText style={styles.switchButtonText}>
-              {isLogin
-                ? "Don't have an account? Sign Up"
-                : "Already have an account? Sign In"}
-            </ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      </KeyboardAvoidingView>
+            <TouchableOpacity
+              style={styles.switchButton}
+              onPress={() => {
+                setIsLogin(!isLogin);
+                setEmail("");
+                setPassword("");
+                setName("");
+              }}
+              disabled={loading}
+            >
+              <ThemedText style={styles.switchButtonText}>
+                {isLogin
+                  ? "Don't have an account? Sign Up"
+                  : "Already have an account? Sign In"}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </>
   );
 }
@@ -136,30 +171,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  keyboardView: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     justifyContent: "center",
     padding: 20,
+    maxWidth: 400,
+    width: width * 0.9,
+    alignSelf: "center",
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
-    marginBottom: 30,
+    marginBottom: 40,
     textAlign: "center",
+    color: "white",
   },
   input: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    borderRadius: 12,
+    marginBottom: 16,
     fontSize: 16,
+    color: "white",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   button: {
-    backgroundColor: "#ff4040",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
     marginTop: 10,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  buttonGradient: {
+    padding: 16,
+    alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -169,6 +232,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  resetButton: {
+    marginTop: 20,
+    padding: 10,
+  },
+  resetButtonText: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+  },
   switchButton: {
     marginTop: 20,
     padding: 10,
@@ -176,6 +248,6 @@ const styles = StyleSheet.create({
   switchButtonText: {
     textAlign: "center",
     fontSize: 14,
-    color: "#666",
+    color: "rgba(255, 255, 255, 0.8)",
   },
 });
