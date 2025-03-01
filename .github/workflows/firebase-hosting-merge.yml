@@ -14,15 +14,15 @@ env:
   FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
   FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
   FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID }}
-  
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Install Dependencies
-      - run: npm install
+        run: npm install  # Added 'run:' to execute the command
       - name: Build
-      - run: npm run build
+        run: npm run build # Added 'run:' to execute the command
       - uses: actions/checkout@v4
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
