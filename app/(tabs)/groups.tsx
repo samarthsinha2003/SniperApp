@@ -6,14 +6,33 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Platform,
+  Animated,
 } from "react-native";
-import { ThemedView } from "../../components/ThemedView";
 import { ThemedText } from "../../components/ThemedText";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { groupsService, type Group } from "../../services/groups";
 import * as Clipboard from "expo-clipboard";
 import { JoinGroupDialog } from "../../components/JoinGroupDialog";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+
+const Card = ({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: any;
+}) => (
+  <LinearGradient
+    colors={["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]}
+    style={[styles.card, style]}
+  >
+    <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+    <View style={styles.cardContent}>{children}</View>
+  </LinearGradient>
+);
 
 export default function GroupsScreen() {
   const { user } = useAuth();
@@ -22,10 +41,19 @@ export default function GroupsScreen() {
   const [newGroupName, setNewGroupName] = useState("");
   const [loading, setLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
+  const formAnimation = new Animated.Value(showNewGroup ? 1 : 0);
 
   useEffect(() => {
     loadGroups();
   }, [user]);
+
+  useEffect(() => {
+    Animated.timing(formAnimation, {
+      toValue: showNewGroup ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [showNewGroup]);
 
   const loadGroups = async () => {
     if (!user) return;
@@ -100,84 +128,137 @@ export default function GroupsScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={[styles.container, styles.centered]}>
-        <ThemedText>Loading groups...</ThemedText>
-      </ThemedView>
+      <LinearGradient
+        colors={["#4a00e0", "#8e2de2"]}
+        style={[styles.container, styles.centered]}
+      >
+        <ThemedText style={styles.loadingText}>Loading groups...</ThemedText>
+      </LinearGradient>
     );
   }
 
   return (
-    <ThemedView style={styles.container}>
+    <LinearGradient colors={["#4a00e0", "#8e2de2"]} style={styles.container}>
       <View style={styles.header}>
         <ThemedText style={styles.title}>Your Groups</ThemedText>
         <View style={styles.headerButtons}>
           <TouchableOpacity
-            style={[styles.button, styles.joinButton]}
+            style={styles.iconButton}
             onPress={() => setShowJoinDialog(true)}
           >
-            <MaterialIcons name="group-add" size={24} color="white" />
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              style={styles.iconButtonGradient}
+            >
+              <MaterialIcons name="group-add" size={24} color="white" />
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.addButton]}
+            style={styles.iconButton}
             onPress={() => setShowNewGroup(true)}
           >
-            <MaterialIcons name="add" size={24} color="white" />
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              style={styles.iconButtonGradient}
+            >
+              <MaterialIcons name="add" size={24} color="white" />
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
 
-      {showNewGroup && (
-        <View style={styles.newGroupForm}>
-          <TextInput
-            style={styles.input}
-            value={newGroupName}
-            onChangeText={setNewGroupName}
-            placeholder="Enter group name"
-            placeholderTextColor="#666"
-          />
-          <View style={styles.formButtons}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={() => {
-                setShowNewGroup(false);
-                setNewGroupName("");
-              }}
-            >
-              <ThemedText>Cancel</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.createButton]}
-              onPress={createGroup}
-            >
-              <ThemedText>Create</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <Animated.View
+        style={[
+          styles.newGroupFormContainer,
+          {
+            opacity: formAnimation,
+            transform: [
+              {
+                translateY: formAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+        pointerEvents={showNewGroup ? "auto" : "none"}
+      >
+        {showNewGroup && (
+          <Card style={styles.newGroupForm}>
+            <TextInput
+              style={styles.input}
+              value={newGroupName}
+              onChangeText={setNewGroupName}
+              placeholder="Enter group name"
+              placeholderTextColor="rgba(255, 255, 255, 0.6)"
+              selectionColor="#fff"
+            />
+            <View style={styles.formButtons}>
+              <TouchableOpacity
+                style={[styles.formButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowNewGroup(false);
+                  setNewGroupName("");
+                }}
+              >
+                <ThemedText style={styles.buttonText}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.formButton, styles.createButton]}
+                onPress={createGroup}
+              >
+                <LinearGradient
+                  colors={["#6366f1", "#4f46e5"]}
+                  style={styles.buttonGradient}
+                >
+                  <ThemedText style={styles.buttonText}>Create</ThemedText>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        )}
+      </Animated.View>
 
       <ScrollView style={styles.groupList}>
         {groups.map((group) => (
-          <View key={group.id} style={styles.groupCard}>
+          <Card key={group.id} style={styles.groupCard}>
             <View style={styles.groupHeader}>
               <ThemedText style={styles.groupName}>{group.name}</ThemedText>
-              <TouchableOpacity onPress={() => shareGroupInvite(group)}>
-                <MaterialIcons name="share" size={24} color="#666" />
+              <TouchableOpacity
+                style={styles.shareButton}
+                onPress={() => shareGroupInvite(group)}
+              >
+                <MaterialIcons name="share" size={24} color="white" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.membersList}>
               {group.members.map((member) => (
                 <View key={member.id} style={styles.memberItem}>
-                  <ThemedText style={styles.memberName}>
-                    {member.name}
-                  </ThemedText>
-                  <ThemedText style={styles.points}>
-                    {member.points} pts
-                  </ThemedText>
+                  <View style={styles.memberInfo}>
+                    <MaterialIcons
+                      name="person"
+                      size={20}
+                      color="white"
+                      style={styles.memberIcon}
+                    />
+                    <ThemedText style={styles.memberName}>
+                      {member.name}
+                    </ThemedText>
+                  </View>
+                  <LinearGradient
+                    colors={["#6366f1", "#4f46e5"]}
+                    style={styles.pointsBadge}
+                  >
+                    <ThemedText style={styles.points}>
+                      {member.points} pts
+                    </ThemedText>
+                  </LinearGradient>
                 </View>
               ))}
             </View>
-          </View>
+          </Card>
         ))}
       </ScrollView>
 
@@ -186,7 +267,7 @@ export default function GroupsScreen() {
         onClose={() => setShowJoinDialog(false)}
         onSubmit={handleJoinGroup}
       />
-    </ThemedView>
+    </LinearGradient>
   );
 }
 
@@ -199,6 +280,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  loadingText: {
+    color: "white",
+    fontSize: 18,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -207,88 +292,120 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: "row",
+    gap: 12,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: "bold",
+    color: "white",
   },
-  button: {
-    padding: 10,
-    borderRadius: 20,
-    marginLeft: 10,
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    marginLeft: 8,
   },
-  addButton: {
-    backgroundColor: "#ff4040",
+  iconButtonGradient: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  joinButton: {
-    backgroundColor: "#4CAF50",
+  card: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
+  cardContent: {
+    padding: 16,
+  },
+  newGroupFormContainer: {
+    marginBottom: 20,
   },
   newGroupForm: {
-    backgroundColor: "#f5f5f5",
-    padding: 16,
-    borderRadius: 10,
     marginBottom: 20,
   },
   input: {
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 16,
+    fontSize: 16,
+    color: "white",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   formButtons: {
     flexDirection: "row",
     justifyContent: "flex-end",
+    gap: 12,
+  },
+  formButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  buttonGradient: {
+    padding: 12,
+    alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#ddd",
-    marginRight: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   createButton: {
-    backgroundColor: "#ff4040",
+    overflow: "hidden",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "600",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   groupList: {
     flex: 1,
   },
   groupCard: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 16,
     marginBottom: 16,
-    boxShadow: "0px 2px 4px rgba(0,0,0,0.1)",
   },
   groupHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    color: "#333",
+    marginBottom: 16,
   },
   groupName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: "white",
+  },
+  shareButton: {
+    padding: 8,
   },
   membersList: {
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    paddingTop: 12,
+    gap: 12,
   },
   memberItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
   },
-  groupTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+  memberInfo: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  points: {
-    color: "#666",
+  memberIcon: {
+    marginRight: 8,
   },
   memberName: {
     fontSize: 16,
-    color: "#333",
+    color: "white",
+  },
+  pointsBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  points: {
+    color: "white",
+    fontWeight: "600",
   },
 });

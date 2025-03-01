@@ -2,43 +2,97 @@ import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { useAuth } from "../../contexts/AuthContext";
-import { View } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { user, signOut } = useAuth();
+  const isDark = colorScheme === "dark";
 
   if (!user) {
     return null;
   }
 
+  const TabBarBackground = () => {
+    if (Platform.OS === "ios") {
+      return (
+        <BlurView
+          tint={isDark ? "dark" : "light"}
+          intensity={80}
+          style={StyleSheet.absoluteFill}
+        />
+      );
+    }
+    return (
+      <LinearGradient
+        colors={
+          isDark
+            ? ["rgba(26, 32, 44, 0.9)", "rgba(17, 24, 39, 0.9)"]
+            : ["rgba(255, 255, 255, 0.9)", "rgba(249, 250, 251, 0.9)"]
+        }
+        style={StyleSheet.absoluteFill}
+      />
+    );
+  };
+
   return (
     <Tabs
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+          backgroundColor: "transparent",
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 60,
+          paddingBottom: 8,
         },
-        tabBarActiveTintColor: "#ff4040",
-        tabBarInactiveTintColor: "#999",
+        tabBarBackground: TabBarBackground,
+        tabBarActiveTintColor: "#4f46e5",
+        tabBarInactiveTintColor: isDark
+          ? "rgba(255, 255, 255, 0.6)"
+          : "rgba(0, 0, 0, 0.4)",
         headerStyle: {
-          backgroundColor: colorScheme === "dark" ? "#000" : "#fff",
+          backgroundColor: isDark ? "#1a1b1e" : "#ffffff",
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 0,
         },
-        headerTintColor: colorScheme === "dark" ? "#fff" : "#000",
+        headerTintColor: isDark ? "#fff" : "#000",
+        headerShadowVisible: false,
+        headerBackground: () => (
+          <LinearGradient
+            colors={isDark ? ["#1a1b1e", "#2d2d30"] : ["#ffffff", "#f9fafb"]}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}
     >
       <Tabs.Screen
         name="camera"
         options={{
           title: "Camera",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="camera" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
+            >
+              <MaterialIcons
+                name="camera"
+                size={24}
+                color={color}
+                style={focused ? styles.activeIcon : null}
+              />
+            </View>
           ),
           headerRight: () => (
-            <View style={{ marginRight: 15 }}>
+            <View style={styles.headerButton}>
               <MaterialIcons
                 name="logout"
                 size={24}
-                color={colorScheme === "dark" ? "#fff" : "#000"}
+                color={isDark ? "#fff" : "#000"}
                 onPress={signOut}
               />
             </View>
@@ -50,15 +104,27 @@ export default function TabLayout() {
         name="groups"
         options={{
           title: "Groups",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="group" size={24} color={color} />
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
+            >
+              <MaterialIcons
+                name="group"
+                size={24}
+                color={color}
+                style={focused ? styles.activeIcon : null}
+              />
+            </View>
           ),
           headerRight: () => (
-            <View style={{ marginRight: 15 }}>
+            <View style={styles.headerButton}>
               <MaterialIcons
                 name="logout"
                 size={24}
-                color={colorScheme === "dark" ? "#fff" : "#000"}
+                color={isDark ? "#fff" : "#000"}
                 onPress={signOut}
               />
             </View>
@@ -68,3 +134,27 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 20,
+  },
+  activeIconContainer: {
+    backgroundColor: "rgba(79, 70, 229, 0.1)",
+  },
+  activeIcon: {
+    transform: [{ scale: 1.1 }],
+  },
+  headerButton: {
+    marginRight: 15,
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 20,
+  },
+});
