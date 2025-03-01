@@ -40,6 +40,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarStyle: {
           backgroundColor: "transparent",
           borderTopWidth: 0,
@@ -52,20 +53,6 @@ export default function TabLayout() {
         tabBarInactiveTintColor: isDark
           ? "rgba(255, 255, 255, 0.6)"
           : "rgba(0, 0, 0, 0.4)",
-        headerStyle: {
-          backgroundColor: isDark ? "#1a1b1e" : "#ffffff",
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 0,
-        },
-        headerTintColor: isDark ? "#fff" : "#000",
-        headerShadowVisible: false,
-        headerBackground: () => (
-          <LinearGradient
-            colors={isDark ? ["#1a1b1e", "#2d2d30"] : ["#ffffff", "#f9fafb"]}
-            style={StyleSheet.absoluteFill}
-          />
-        ),
       }}
     >
       <Tabs.Screen
@@ -94,6 +81,28 @@ export default function TabLayout() {
                 size={24}
                 color={isDark ? "#fff" : "#000"}
                 onPress={signOut}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: "Shop",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
+            >
+              <MaterialIcons
+                name="store"
+                size={24}
+                color={color}
+                style={focused ? styles.activeIcon : null}
               />
             </View>
           ),

@@ -21,7 +21,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { groupsService } from "../../services/groups";
 
 export default function CameraScreen() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
@@ -194,9 +194,14 @@ export default function CameraScreen() {
       {/* Attach ref to CameraView */}
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
-      <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
-        <Ionicons name="camera-reverse" size={30} color="white" />
-      </TouchableOpacity>
+      <View style={styles.topButtons}>
+        <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
+          <Ionicons name="camera-reverse" size={30} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+          <MaterialIcons name="logout" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.captureContainer}>
         <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
@@ -233,17 +238,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  flipButton: {
+  topButtons: {
     position: "absolute",
-    top: 40,
+    top: 60,
     right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  flipButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.2)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,
+    marginRight: 10,
+  },
+  logoutButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   captureButton: {
     width: 70,
