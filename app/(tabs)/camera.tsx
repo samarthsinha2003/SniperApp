@@ -104,39 +104,36 @@ export default function CameraScreen() {
   }
 
   async function takePicture() {
-    if (!cameraContainerRef.current) {
-      console.error("Error: Camera container reference is null.");
+    if (!cameraRef.current || !cameraContainerRef.current) {
+      console.error("Camera or container reference is null.");
       return;
     }
 
     try {
-      // Add a slight delay to ensure the camera view is rendered
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Capture the camera view with the sniper overlay
-      const uri = await captureRef(cameraContainerRef, {
-        format: "jpg",
+      // Take the photo first
+      const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
-        result: "tmpfile", // Ensures the file is stored properly
+        skipProcessing: true,
       });
 
-      console.log("Picture taken with overlay:", uri);
+      if (!photo?.uri) {
+        throw new Error("Failed to take photo");
+      }
 
-      if (uri) {
-        // Check if captureRef was successful
-        // Save the captured image to the gallery
-        const asset = await MediaLibrary.createAssetAsync(uri);
-        console.log("Photo saved at:", asset.uri);
+      // Now capture the entire view including the overlay
+      const finalUri = await captureRef(cameraContainerRef, {
+        format: "jpg",
+        quality: 0.8,
+        result: "tmpfile",
+      });
+
+      // Save the final image to the gallery
+      if (finalUri) {
+        const asset = await MediaLibrary.createAssetAsync(finalUri);
+        console.log("Photo saved successfully at:", asset.uri);
         Alert.alert(
-          "Picture Saved",
+          "Success",
           "Picture saved to gallery!",
-          [{ text: "OK", onPress: () => console.log("OK Pressed") }],
-          { cancelable: false }
-        );
-      } else {
-        Alert.alert(
-          "Capture Failed",
-          "Failed to capture image. Please try again.",
           [{ text: "OK", onPress: () => console.log("OK Pressed") }],
           { cancelable: false }
         );
@@ -145,7 +142,7 @@ export default function CameraScreen() {
       console.error("Error capturing image:", error);
       Alert.alert(
         "Error",
-        "An error occurred while saving the picture.",
+        "Failed to save the picture. Please try again.",
         [{ text: "OK", onPress: () => console.log("OK Pressed") }],
         { cancelable: false }
       );
