@@ -1,7 +1,15 @@
 import React, { useState, useRef } from "react";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
-import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Button,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+} from "react-native";
 import * as MediaLibrary from "expo-media-library";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -77,12 +85,13 @@ export default function CameraScreen() {
       {/* Attach ref to CameraView */}
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
-          <Text style={styles.text}>Flip Camera</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={takePicture}>
-          <Text style={styles.text}>Take Picture</Text>
+      <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
+        <Ionicons name="camera-reverse" size={30} color="white" />
+      </TouchableOpacity>
+
+      <View style={styles.captureContainer}>
+        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+          <View style={styles.captureButtonInner} />
         </TouchableOpacity>
       </View>
     </View>
@@ -101,18 +110,40 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  buttonContainer: {
-    flexDirection: "row",
+  captureContainer: {
+    position: "absolute",
+    bottom: 40,
+    width: "100%",
+    alignItems: "center",
     backgroundColor: "transparent",
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "space-around",
   },
-  button: {
+  flipButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.2)",
     alignItems: "center",
-    backgroundColor: "#00000080",
-    padding: 10,
-    borderRadius: 5,
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderWidth: 4,
+    borderColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  captureButtonInner: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "white",
   },
   text: {
     fontSize: 18,
