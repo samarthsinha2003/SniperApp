@@ -9,19 +9,17 @@ import {
   Image,
 } from "react-native";
 import * as MediaLibrary from "expo-media-library";
-import { captureRef } from "react-native-view-shot"; // Capture the entire camera + overlay
+import { captureRef } from "react-native-view-shot"; // Capture the camera + overlay
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
+  const cameraContainerRef = useRef<View>(null); // Ref to capture view
   const cameraRef = useRef<CameraView>(null); // Camera reference
-  const cameraContainerRef = useRef<View>(null); // View reference for screenshot
 
-  if (!permission || !mediaPermission) {
-    return <View />;
-  }
+  if (!permission || !mediaPermission) return <View />;
 
   if (!permission.granted) {
     return (
@@ -54,15 +52,19 @@ export default function CameraScreen() {
 
   async function takePicture() {
     if (!cameraContainerRef.current) {
-      console.error("Camera container reference is null.");
+      console.error("Error: Camera container reference is null.");
       return;
     }
 
     try {
-      // Capture the camera view along with the sniper overlay
+      // Add a slight delay to ensure the camera view is rendered
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Capture the camera view with the sniper overlay
       const uri = await captureRef(cameraContainerRef, {
         format: "jpg",
         quality: 0.8,
+        result: "tmpfile", // Ensures the file is stored properly
       });
 
       console.log("Picture taken with overlay:", uri);
@@ -78,8 +80,12 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Wrap the CameraView & Sniper Overlay in a parent View to capture both */}
-      <View ref={cameraContainerRef} style={styles.cameraContainer}>
+      {/* Attach ref to ensure captureRef() works */}
+      <View
+        ref={cameraContainerRef}
+        collapsable={false}
+        style={styles.cameraContainer}
+      >
         {/* Camera Feed */}
         <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
@@ -127,7 +133,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: "100%",
     height: "100%",
-    resizeMode: "contain", // Ensures the sniper scope fits the screen properly
+    resizeMode: "contain",
   },
   buttonContainer: {
     flexDirection: "row",
