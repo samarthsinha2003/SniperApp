@@ -182,7 +182,7 @@ export default function CameraScreen() {
 
         {/* Sniper Scope Overlay */}
         <Image
-          source={require("../assets/image.png")}
+          source={require("../../assets/images/tempsniperlogo.png")}
           style={styles.sniperScope}
         />
 
