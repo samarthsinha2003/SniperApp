@@ -168,7 +168,9 @@ export default function GroupsScreen() {
             <View style={styles.membersList}>
               {group.members.map((member) => (
                 <View key={member.id} style={styles.memberItem}>
-                  <ThemedText>{member.name}</ThemedText>
+                  <ThemedText style={styles.memberName}>
+                    {member.name}
+                  </ThemedText>
                   <ThemedText style={styles.points}>
                     {member.points} pts
                   </ThemedText>
@@ -259,10 +261,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    color: "#333",
   },
   groupName: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#333",
   },
   membersList: {
     borderTopWidth: 1,
@@ -275,7 +279,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
   },
+  groupTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
   points: {
     color: "#666",
+  },
+  memberName: {
+    fontSize: 16,
+    color: "#333",
   },
 });
