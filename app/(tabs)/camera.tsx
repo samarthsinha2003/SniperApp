@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import {
   View,
@@ -11,17 +11,20 @@ import {
 import { WebView } from "react-native-webview";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
+import { Asset } from "expo-asset"; // ✅ Import expo-asset
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
+  const [sniperBase64, setSniperBase64] = useState<string | null>(null);
 
   const cameraRef = useRef<CameraView>(null);
   const webViewRef = useRef<WebView>(null);
 
   if (!permission || !mediaPermission) return <View />;
+
   if (!permission.granted) {
     return (
       <View style={styles.container}>
@@ -46,19 +49,39 @@ export default function CameraScreen() {
     setFacing((current) => (current === "back" ? "front" : "back"));
   };
 
-  // Function to convert sniper image to Base64
-  async function getSniperImageBase64() {
-    try {
-      const sniperUri = require("../../assets/images/tempsniperlogo.png");
-      const base64 = await FileSystem.readAsStringAsync(sniperUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      return `data:image/png;base64,${base64}`; // Return in proper format for WebView
-    } catch (error) {
-      console.error("Error converting sniper image to Base64:", error);
-      return null;
+  // ✅ Function to load sniper scope image into Base64 (runs on app start)
+  useEffect(() => {
+    async function loadSniperImage() {
+      try {
+        // Load sniper scope image as asset
+        const sniperAsset = Asset.fromModule(
+          require("../../assets/images/tempsniperlogo.png")
+        );
+        await sniperAsset.downloadAsync(); // Ensure it's downloaded
+
+        // Copy sniper image to app's document directory
+        const sniperUri = `${FileSystem.documentDirectory}tempsniperlogo.png`;
+        if (!sniperAsset.localUri) {
+          throw new Error("Sniper asset URI is null");
+        }
+        await FileSystem.copyAsync({
+          from: sniperAsset.localUri,
+          to: sniperUri,
+        });
+
+        // Convert to Base64
+        const base64 = await FileSystem.readAsStringAsync(sniperUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        setSniperBase64(`data:image/png;base64,${base64}`); // ✅ Set state with Base64
+      } catch (error) {
+        console.error("Error loading sniper image:", error);
+      }
     }
-  }
+
+    loadSniperImage();
+  }, []);
 
   async function takePicture() {
     if (!cameraRef.current) {
@@ -76,17 +99,15 @@ export default function CameraScreen() {
 
       console.log("Camera photo URI:", photo.uri);
 
-      // 2. Convert sniper scope image to base64
-      const sniperBase64 = await getSniperImageBase64();
       if (!sniperBase64) {
-        Alert.alert("Error", "Sniper scope image could not be loaded");
+        Alert.alert("Error", "Sniper scope image not loaded");
         return;
       }
 
       // 3. Send both image URIs to WebView for merging
       const message = JSON.stringify({
         cameraUri: photo.uri,
-        sniperBase64: sniperBase64, // Send Base64 instead of a URI
+        sniperBase64: sniperBase64, // ✅ Send Base64 instead of a URI
       });
 
       webViewRef.current?.injectJavaScript(`mergeImages('${message}')`);
@@ -96,7 +117,6 @@ export default function CameraScreen() {
   }
 
   const handleWebViewMessage = async (event: any) => {
-    // This is called when the WebView posts a message
     const data = event.nativeEvent.data; // Should be a base64 string
     if (!data.startsWith("data:image")) {
       console.error("Invalid data from WebView");
@@ -106,7 +126,6 @@ export default function CameraScreen() {
     try {
       // 3. Save base64 to file
       const fileUri = FileSystem.documentDirectory + "sniper_photo.jpg";
-      // Remove the 'data:image/jpeg;base64,' prefix if needed
       const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
       await FileSystem.writeAsStringAsync(fileUri, base64Data, {
         encoding: FileSystem.EncodingType.Base64,
@@ -120,9 +139,6 @@ export default function CameraScreen() {
     }
   };
 
-  // 5. The HTML for merging images in a hidden WebView
-  // We define a small script that merges images on a <canvas>
-  // and calls postMessage with the base64 result
   const getMergeHTML = () => `
     <html>
       <body>
@@ -144,13 +160,13 @@ export default function CameraScreen() {
 
             try {
               const cameraImg = await loadImage(cameraUri);
-              const sniperImg = await loadImage(sniperBase64); // Load Base64 image
+              const sniperImg = await loadImage(sniperBase64);
 
               const canvas = document.getElementById('canvas');
               const ctx = canvas.getContext('2d');
 
               ctx.drawImage(cameraImg, 0, 0, canvas.width, canvas.height);
-              ctx.drawImage(sniperImg, 0, 0, canvas.width, canvas.height); // Draw sniper overlay
+              ctx.drawImage(sniperImg, 0, 0, canvas.width, canvas.height);
 
               const mergedBase64 = canvas.toDataURL('image/jpeg', 0.8);
               window.ReactNativeWebView.postMessage(mergedBase64);
@@ -166,10 +182,8 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 6. The Camera View */}
       <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
-      {/* 7. Hidden WebView for compositing images */}
       <WebView
         ref={webViewRef}
         source={{ html: getMergeHTML() }}
@@ -177,7 +191,6 @@ export default function CameraScreen() {
         style={{ width: 1, height: 1, position: "absolute", top: -9999 }}
       />
 
-      {/* UI Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
           <Text style={styles.text}>Flip Camera</Text>
