@@ -19,20 +19,18 @@ if (result.error) {
 
 // Construct the Firebase config command
 const config = {
-  firebase: {
-    apikey: process.env.FIREBASE_API_KEY,
-    authdomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectid: process.env.FIREBASE_PROJECT_ID,
-    storagebucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingsenderid: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appid: process.env.FIREBASE_APP_ID,
-    measurementid: process.env.FIREBASE_MEASUREMENT_ID,
-  },
+  apikey: process.env.FIREBASE_API_KEY,
+  authdomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectid: process.env.FIREBASE_PROJECT_ID,
+  storagebucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingsenderid: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appid: process.env.FIREBASE_APP_ID,
+  measurementid: process.env.FIREBASE_MEASUREMENT_ID,
 };
 
 // Convert config object to Firebase CLI format
-const configString = Object.entries(config.firebase)
-  .map(([key, value]) => `firebase.${key}="${value}"`)
+const configString = Object.entries(config)
+  .map(([key, value]) => `app.${key}="${value}"`)
   .join(" ");
 
 try {
