@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   View,
@@ -8,7 +8,10 @@ import {
   Alert,
   Platform,
   Animated,
+  ActivityIndicator, // Import ActivityIndicator
 } from "react-native";
+import { onSnapshot, doc, collection, query, where } from "firebase/firestore";
+import { db } from "../../config/firebase";
 import { ThemedText } from "../../components/ThemedText";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
@@ -21,17 +24,70 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function GroupsScreen() {
   const { user, signOut } = useAuth();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = colorScheme === "dark"; // While we are forcing light theme look, this is still good to have
   const [groups, setGroups] = useState<Group[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [loading, setLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const formAnimation = new Animated.Value(showNewGroup ? 1 : 0);
+  const unsubscribeRefs = useRef<{ [key: string]: () => void }>({});
+
+  const setupGroupListener = (groupId: string) => {
+    // Clean up existing listener if any
+    if (unsubscribeRefs.current[groupId]) {
+      unsubscribeRefs.current[groupId]();
+    }
+
+    // Set up new listener
+    const unsubscribe = onSnapshot(doc(db, "groups", groupId), (doc) => {
+      if (doc.exists()) {
+        setGroups((prevGroups) => {
+          const updatedGroups = [...prevGroups];
+          const index = updatedGroups.findIndex((g) => g.id === groupId);
+          if (index !== -1) {
+            updatedGroups[index] = doc.data() as Group;
+          }
+          return updatedGroups;
+        });
+      }
+    });
+
+    unsubscribeRefs.current[groupId] = unsubscribe;
+  };
 
   useEffect(() => {
-    loadGroups();
-  }, [user]);
+    async function setupListeners() {
+      if (!user?.id) return;
+
+      try {
+        setLoading(true);
+        // First get the initial groups
+        const userGroups = await groupsService.getUserGroups(user.id);
+        setGroups(userGroups);
+
+        // Set up real-time listeners for each group
+        userGroups.forEach((group) => {
+          setupGroupListener(group.id);
+        });
+      } catch (error) {
+        console.error("Error setting up group listeners:", error);
+        Alert.alert("Error", "Failed to load groups");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    setupListeners();
+
+    // Cleanup function
+    return () => {
+      Object.values(unsubscribeRefs.current).forEach((unsubscribe) =>
+        unsubscribe()
+      );
+      unsubscribeRefs.current = {};
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     Animated.timing(formAnimation, {
@@ -71,6 +127,7 @@ export default function GroupsScreen() {
         user.id
       );
       setGroups([...groups, newGroup]);
+      setupGroupListener(newGroup.id);
       setNewGroupName("");
       setShowNewGroup(false);
     } catch (error) {
@@ -99,10 +156,12 @@ export default function GroupsScreen() {
 
     try {
       setLoading(true);
-      const success = await groupsService.joinGroup(inviteCode, user);
+      const result = await groupsService.joinGroup(inviteCode, user);
       setShowJoinDialog(false);
-      if (success) {
-        await loadGroups();
+      if (result.success && result.groupId) {
+        const newGroup = await groupsService.getUserGroups(user.id);
+        setGroups(newGroup);
+        setupGroupListener(result.groupId);
         Alert.alert("Success", "You have joined the group!");
       }
     } catch (error: any) {
@@ -116,13 +175,15 @@ export default function GroupsScreen() {
     return (
       <View style={[styles.container, styles.centered]}>
         <LinearGradient
-          colors={isDark ? ["#1a1b1e", "#2d2d30"] : ["#ffffff", "#f9fafb"]}
+          colors={["#4a00e0", "#8e2de2"]} // Auth screen gradient
           style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         />
-        <ThemedText
-          style={[styles.loadingText, { color: isDark ? "#fff" : "#000" }]}
-        >
-          Loading groups...
+        <ActivityIndicator size="large" color="#ff6f00" />
+        {/* Loading indicator */}
+        <ThemedText style={[styles.loadingText, { color: "#fff" }]}>
+          Loading teams...
         </ThemedText>
       </View>
     );
@@ -131,219 +192,179 @@ export default function GroupsScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={isDark ? ["#1a1b1e", "#2d2d30"] : ["#ffffff", "#f9fafb"]}
+        colors={["#4a00e0", "#8e2de2"]} // Auth screen gradient
         style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       />
-      <View style={styles.header}>
-        <ThemedText style={[styles.title, { color: isDark ? "#fff" : "#000" }]}>
-          Your Groups
-        </ThemedText>
-        <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
-          <MaterialIcons
-            name="logout"
-            size={24}
-            color={isDark ? "#fff" : "#000"}
+      {loading ? ( // Conditional rendering for loading state
+        <View style={[styles.container, styles.centered]}>
+          <LinearGradient
+            colors={["#4a00e0", "#8e2de2"]} // Auth screen gradient
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            {
-              backgroundColor: isDark
-                ? "rgba(255,255,255,0.1)"
-                : "rgba(0,0,0,0.05)",
-            },
-          ]}
-          onPress={() => setShowJoinDialog(true)}
-        >
-          <View style={styles.actionButtonIcon}>
-            <MaterialIcons name="group-add" size={24} color="#4f46e5" />
-          </View>
-          <ThemedText
-            style={[
-              styles.actionButtonText,
-              { color: isDark ? "#fff" : "#000" },
-            ]}
-          >
-            Join Team
+          <ActivityIndicator size="large" color="#ff6f00" />
+          <ThemedText style={[styles.loadingText, { color: "#fff" }]}>
+            Loading teams...
           </ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            {
-              backgroundColor: isDark
-                ? "rgba(255,255,255,0.1)"
-                : "rgba(0,0,0,0.05)",
-            },
-          ]}
-          onPress={() => setShowNewGroup(true)}
-        >
-          <View style={styles.actionButtonIcon}>
-            <MaterialIcons name="add" size={24} color="#4f46e5" />
+        </View>
+      ) : (
+        <>
+          <View style={styles.header}>
+            <ThemedText style={[styles.title, { color: "#fff" }]}>
+              Your Teams
+            </ThemedText>
+            <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+              <MaterialIcons name="logout" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
-          <ThemedText
-            style={[
-              styles.actionButtonText,
-              { color: isDark ? "#fff" : "#000" },
-            ]}
-          >
-            New Team
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
 
-      <ScrollView style={styles.groupList}>
-        {groups.map((group) => (
-          <View
-            key={group.id}
-            style={[
-              styles.groupCard,
-              {
-                backgroundColor: isDark
-                  ? "rgba(255,255,255,0.1)"
-                  : "rgba(0,0,0,0.05)",
-              },
-            ]}
-          >
-            <View style={styles.groupHeader}>
-              <ThemedText
-                style={[styles.groupName, { color: isDark ? "#fff" : "#000" }]}
-              >
-                {group.name}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton]}
+              onPress={() => setShowJoinDialog(true)}
+            >
+              <View style={styles.actionButtonIcon}>
+                <MaterialIcons name="group-add" size={24} color="#ff6f00" />
+              </View>
+              <ThemedText style={[styles.actionButtonText, { color: "#fff" }]}>
+                Join Team
               </ThemedText>
-              <TouchableOpacity
-                style={styles.shareButton}
-                onPress={() => shareGroupInvite(group)}
-              >
-                <MaterialIcons
-                  name="share"
-                  size={24}
-                  color={isDark ? "#fff" : "#000"}
-                />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.membersList}>
-              {group.members.map((member) => (
-                <View key={member.id} style={styles.memberItem}>
-                  <View style={styles.memberInfo}>
-                    <MaterialIcons
-                      name="person"
-                      size={20}
-                      color="#4f46e5"
-                      style={styles.memberIcon}
-                    />
-                    <ThemedText
-                      style={[
-                        styles.memberName,
-                        { color: isDark ? "#fff" : "#000" },
-                      ]}
-                    >
-                      {member.name}
-                    </ThemedText>
-                  </View>
-                  <LinearGradient
-                    colors={["#6366f1", "#4f46e5"]}
-                    style={styles.pointsBadge}
-                  >
-                    <ThemedText style={styles.points}>
-                      {member.points} pts
-                    </ThemedText>
-                  </LinearGradient>
-                </View>
-              ))}
-            </View>
+            <TouchableOpacity
+              style={[styles.actionButton]}
+              onPress={() => setShowNewGroup(true)}
+            >
+              <View style={styles.actionButtonIcon}>
+                <MaterialIcons name="add" size={24} color="#ff6f00" />
+              </View>
+              <ThemedText style={[styles.actionButtonText, { color: "#fff" }]}>
+                New Team
+              </ThemedText>
+            </TouchableOpacity>
           </View>
-        ))}
-      </ScrollView>
 
-      <Animated.View
-        style={[
-          styles.newGroupFormContainer,
-          {
-            opacity: formAnimation,
-            transform: [
-              {
-                translateY: formAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-20, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents={showNewGroup ? "auto" : "none"}
-      >
-        {showNewGroup && (
-          <View
+          <ScrollView style={styles.groupList}>
+            {groups.map((group) => (
+              <View key={group.id} style={[styles.groupCard]}>
+                <View style={styles.groupHeader}>
+                  <ThemedText style={[styles.groupName, { color: "#fff" }]}>
+                    {group.name}
+                  </ThemedText>
+                  <TouchableOpacity
+                    style={styles.shareButton}
+                    onPress={() => shareGroupInvite(group)}
+                  >
+                    <MaterialIcons name="share" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.membersList}>
+                  {group.members.map((member) => (
+                    <View key={member.id} style={styles.memberItem}>
+                      <View style={styles.memberInfo}>
+                        <MaterialIcons
+                          name="person"
+                          size={20}
+                          color="#ff6f00"
+                          style={styles.memberIcon}
+                        />
+                        <ThemedText
+                          style={[styles.memberName, { color: "#fff" }]}
+                        >
+                          {member.name}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.pointsBadge}>
+                        <ThemedText style={[styles.points, { color: "#fff" }]}>
+                          {member.points}
+                          <ThemedText
+                            style={[styles.pointsUnit, { color: "#fff" }]}
+                          >
+                            {" Points"}
+                          </ThemedText>
+                        </ThemedText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          <Animated.View
             style={[
-              styles.newGroupForm,
+              styles.newGroupFormContainer,
               {
-                backgroundColor: isDark
-                  ? "rgba(255,255,255,0.1)"
-                  : "rgba(0,0,0,0.05)",
+                opacity: formAnimation,
+                transform: [
+                  {
+                    translateY: formAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
               },
             ]}
+            pointerEvents={showNewGroup ? "auto" : "none"}
           >
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: isDark ? "#fff" : "#000",
-                  backgroundColor: isDark
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.05)",
-                },
-              ]}
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              placeholder="Enter group name"
-              placeholderTextColor={isDark ? "#aaa" : "#666"}
-              selectionColor={isDark ? "#fff" : "#000"}
-            />
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.formButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowNewGroup(false);
-                  setNewGroupName("");
-                }}
-              >
-                <ThemedText
+            {showNewGroup && (
+              <View style={[styles.newGroupForm]}>
+                <TextInput
                   style={[
-                    styles.buttonText,
-                    { color: isDark ? "#fff" : "#000" },
+                    styles.input,
+                    {
+                      color: "#fff",
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                    },
                   ]}
-                >
-                  Cancel
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.formButton, styles.createButton]}
-                onPress={createGroup}
-              >
-                <LinearGradient
-                  colors={["#6366f1", "#4f46e5"]}
-                  style={styles.buttonGradient}
-                >
-                  <ThemedText style={styles.buttonText}>Create</ThemedText>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </Animated.View>
+                  value={newGroupName}
+                  onChangeText={setNewGroupName}
+                  placeholder="Enter team name"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  selectionColor="#fff"
+                />
+                <View style={styles.formButtons}>
+                  <TouchableOpacity
+                    style={[styles.formButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowNewGroup(false);
+                      setNewGroupName("");
+                    }}
+                  >
+                    <ThemedText style={[styles.buttonText, { color: "#fff" }]}>
+                      Cancel
+                    </ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.formButton, styles.createButton]}
+                    onPress={createGroup}
+                  >
+                    <LinearGradient
+                      colors={["#ff6f00", "#ff8f00"]}
+                      style={styles.buttonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <ThemedText style={styles.buttonText}>Create</ThemedText>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </Animated.View>
 
-      <JoinGroupDialog
-        visible={showJoinDialog}
-        onClose={() => setShowJoinDialog(false)}
-        onSubmit={handleJoinGroup}
-      />
+          <JoinGroupDialog
+            visible={showJoinDialog}
+            onClose={() => setShowJoinDialog(false)}
+            onSubmit={handleJoinGroup}
+          />
+        </>
+      )}
     </View>
   );
 }
@@ -357,19 +378,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loadingText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 10,
+    color: "#fff",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   logoutButton: {
     width: 40,
@@ -377,6 +405,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
   actionButtons: {
     flexDirection: "row",
@@ -390,19 +419,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 15,
     borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   actionButtonIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(79, 70, 229, 0.1)",
+    backgroundColor: "rgba(255, 111, 0, 0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
   },
   actionButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   groupList: {
     flex: 1,
@@ -412,6 +446,15 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 15,
     marginBottom: 15,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   groupHeader: {
     flexDirection: "row",
@@ -420,8 +463,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   groupName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   shareButton: {
     padding: 8,
@@ -442,16 +489,42 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   memberName: {
-    fontSize: 16,
+    fontSize: 18,
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   pointsBadge: {
+    backgroundColor: "#ff6f00",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingVertical: 8,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
   },
   points: {
     color: "white",
-    fontWeight: "600",
+    fontWeight: "bold",
+    fontSize: 16,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  pointsUnit: {
+    // Style for " Points" unit
+    color: "white",
+    fontWeight: "normal", // Or any style you want for the unit
+    fontSize: 12, // Smaller unit size
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   newGroupFormContainer: {
     position: "absolute",
@@ -461,13 +534,22 @@ const styles = StyleSheet.create({
   },
   newGroupForm: {
     borderRadius: 15,
-    padding: 15,
+    padding: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   input: {
     padding: 15,
     borderRadius: 12,
     marginBottom: 16,
-    fontSize: 16,
+    fontSize: 18,
   },
   formButtons: {
     flexDirection: "row",
@@ -479,7 +561,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   buttonGradient: {
-    padding: 12,
+    padding: 14,
     alignItems: "center",
   },
   cancelButton: {
@@ -491,7 +573,11 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "600",
+    fontSize: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });

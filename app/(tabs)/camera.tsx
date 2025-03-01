@@ -8,6 +8,7 @@ import {
   View,
   Dimensions,
   Alert,
+  AppState,
 } from "react-native";
 import * as MediaLibrary from "expo-media-library";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +20,19 @@ import {
 } from "../../components/TargetSelectionModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { groupsService } from "../../services/groups";
+import { snipesService, Snipe } from "../../services/snipes";
+import DodgeAlert from "../../components/DodgeAlert";
+import CountdownTimer from "../../components/CountdownTimer";
+import {
+  onSnapshot,
+  collection,
+  query,
+  where,
+  doc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 export default function CameraScreen() {
   const { user, signOut } = useAuth();
@@ -30,9 +44,54 @@ export default function CameraScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
   const [availableTargets, setAvailableTargets] = useState<Target[]>([]);
+  const [activeSnipe, setActiveSnipe] = useState<Snipe | null>(null);
+  const [countdownEndTime, setCountdownEndTime] = useState<Date | null>(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     loadTargets();
+
+    // Set up snipe listener
+    if (user?.id) {
+      const q = query(
+        collection(db, "snipes"),
+        where("targetId", "==", user.id),
+        where("status", "==", "pending")
+      );
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const snipeData = change.doc.data() as Snipe;
+            setActiveSnipe(snipeData);
+          }
+        });
+      });
+
+      // Handle app state changes
+      const subscription = AppState.addEventListener(
+        "change",
+        (nextAppState) => {
+          if (
+            appState.current.match(/inactive|background/) &&
+            nextAppState === "active"
+          ) {
+            // App has come to foreground - check for active snipes
+            snipesService.getActiveSnipesForTarget(user.id).then((snipes) => {
+              if (snipes.length > 0) {
+                setActiveSnipe(snipes[0]);
+              }
+            });
+          }
+          appState.current = nextAppState;
+        }
+      );
+
+      return () => {
+        unsubscribe();
+        subscription.remove();
+      };
+    }
   }, [user]);
 
   const loadTargets = async () => {
@@ -149,15 +208,47 @@ export default function CameraScreen() {
 
   const handleTargetSelection = async (target: Target) => {
     try {
-      if (!user) return;
-      await groupsService.updatePoints(target.groupId, user.id, 1); // Add 1 point to the sniper
+      if (!user || !lastPhotoUri) return;
+
+      // Create a new snipe
+      const snipeId = await snipesService.createSnipe(
+        user.id,
+        target.id,
+        target.groupId,
+        lastPhotoUri
+      );
+
       setModalVisible(false);
       setLastPhotoUri(null);
-      Alert.alert("Success", `You sniped ${target.name}!`);
-      loadTargets(); // Refresh targets to update points
+
+      // Set countdown end time
+      const endTime = new Date(Date.now() + 5000); // 5 seconds from now
+      setCountdownEndTime(endTime);
+
+      Alert.alert(
+        "Success",
+        `You sniped ${target.name}! They have 5 seconds to dodge.`
+      );
+
+      // Wait for 5 seconds or until dodged
+      const timeoutId = setTimeout(async () => {
+        const snipeDoc = await getDoc(doc(db, "snipes", snipeId));
+        if (snipeDoc.exists()) {
+          const snipeData = snipeDoc.data() as Snipe;
+          if (snipeData.status === "pending") {
+            // If not dodged, award point to sniper
+            await updateDoc(doc(db, "snipes", snipeId), {
+              status: "completed",
+            });
+            await groupsService.updatePoints(target.groupId, user.id, 1);
+            loadTargets(); // Refresh targets to update points
+            setCountdownEndTime(null);
+          }
+        }
+      }, 5000);
     } catch (error) {
-      console.error("Error updating points:", error);
-      Alert.alert("Error", "Failed to update points");
+      console.error("Error creating snipe:", error);
+      Alert.alert("Error", "Failed to snipe target");
     }
   };
 
@@ -215,6 +306,27 @@ export default function CameraScreen() {
         onSelectTarget={handleTargetSelection}
         targets={availableTargets}
       />
+
+      {countdownEndTime && (
+        <CountdownTimer
+          endTime={countdownEndTime}
+          onComplete={() => setCountdownEndTime(null)}
+        />
+      )}
+
+      {activeSnipe && (
+        <DodgeAlert
+          snipe={activeSnipe}
+          onDodged={() => {
+            setActiveSnipe(null);
+            setCountdownEndTime(null);
+            loadTargets(); // Refresh targets to update points
+          }}
+          onExpired={() => {
+            setActiveSnipe(null);
+          }}
+        />
+      )}
     </View>
   );
 }

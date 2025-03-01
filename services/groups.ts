@@ -18,6 +18,11 @@ export interface User {
   email: string;
   points: number;
   groups: string[]; // Array of group IDs
+  inventory?: {
+    id: string;
+    purchasedAt: number;
+    used?: boolean;
+  }[];
 }
 
 export interface Group {
@@ -58,7 +63,10 @@ export const groupsService = {
     return newGroup;
   },
 
-  async joinGroup(inviteCode: string, user: User): Promise<boolean> {
+  async joinGroup(
+    inviteCode: string,
+    user: User
+  ): Promise<{ success: boolean; groupId?: string }> {
     // Find group by invite code
     const groupsRef = collection(db, "groups");
     const q = query(groupsRef, where("inviteCode", "==", inviteCode));
@@ -73,7 +81,7 @@ export const groupsService = {
 
     // Check if user is already a member
     if (group.members.some((member) => member.id === user.id)) {
-      return false;
+      return { success: false };
     }
 
     // Add user to group
@@ -91,7 +99,7 @@ export const groupsService = {
       groups: arrayUnion(groupDoc.id),
     });
 
-    return true;
+    return { success: true, groupId: groupDoc.id };
   },
 
   async getUserGroups(userId: string): Promise<Group[]> {
@@ -148,8 +156,14 @@ export const groupsService = {
 
     // Update user's total points
     const userRef = doc(db, "users", userId);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) {
+      throw new Error("User not found");
+    }
+    const userData = userDoc.data() as User;
+
     await updateDoc(userRef, {
-      points: points,
+      points: userData.points + points,
     });
   },
 

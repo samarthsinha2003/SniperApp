@@ -26,6 +26,7 @@ export const authService = {
         email: email,
         points: 0,
         groups: [],
+        inventory: [],
       };
       await setDoc(doc(db, "users", userCredential.user.uid), newUser);
     }
@@ -50,6 +51,7 @@ export const authService = {
         email,
         points: 0,
         groups: [],
+        inventory: [],
       };
 
       // Use set with merge to ensure the document is created
@@ -76,6 +78,7 @@ export const authService = {
         email: auth.currentUser.email || "",
         points: 0,
         groups: [],
+        inventory: [],
       };
       await setDoc(doc(db, "users", auth.currentUser.uid), newUser);
       return newUser;
