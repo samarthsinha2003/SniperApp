@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as MediaLibrary from "expo-media-library";
-import { captureScreen } from "react-native-view-shot"; // Used to capture the camera frame
+import { captureRef } from "react-native-view-shot"; // Used to capture only CameraView
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
+  const cameraViewRef = useRef(null); // Reference to CameraView
 
   if (!permission || !mediaPermission) {
     return <View />;
@@ -45,18 +46,22 @@ export default function CameraScreen() {
 
   async function takePicture() {
     try {
-      // Capture the screen
-      const uri = await captureScreen({
-        format: "jpg",
-        quality: 0.8,
-      });
+      if (cameraViewRef.current) {
+        // Capture only the CameraView, not the entire screen
+        const uri = await captureRef(cameraViewRef, {
+          format: "jpg",
+          quality: 0.8,
+        });
 
-      console.log("Picture taken:", uri);
+        console.log("Picture taken:", uri);
 
-      // Save the captured image
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      console.log("Photo saved at:", asset.uri);
-      alert("Picture saved to gallery!");
+        // Save the captured image to the gallery
+        const asset = await MediaLibrary.createAssetAsync(uri);
+        console.log("Photo saved at:", asset.uri);
+        alert("Picture saved to gallery!");
+      } else {
+        console.error("CameraView reference is null.");
+      }
     } catch (error) {
       console.error("Error capturing image:", error);
     }
@@ -64,16 +69,19 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
-            <Text style={styles.text}>Flip Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={takePicture}>
-            <Text style={styles.text}>Take Picture</Text>
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+      {/* Wrap CameraView inside a View and assign ref */}
+      <View ref={cameraViewRef} style={styles.cameraContainer}>
+        <CameraView style={styles.camera} facing={facing} />
+      </View>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
+          <Text style={styles.text}>Flip Camera</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={takePicture}>
+          <Text style={styles.text}>Take Picture</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -87,19 +95,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingBottom: 10,
   },
+  cameraContainer: {
+    flex: 1,
+    overflow: "hidden", // Ensure UI elements don’t appear in screenshots
+  },
   camera: {
     flex: 1,
   },
   buttonContainer: {
-    flex: 1,
     flexDirection: "row",
     backgroundColor: "transparent",
-    margin: 64,
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "space-around",
   },
   button: {
-    flex: 0.45,
     alignItems: "center",
     backgroundColor: "#00000080",
     padding: 10,
