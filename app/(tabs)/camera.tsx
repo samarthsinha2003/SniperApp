@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Platform,
   Image,
+  Alert, // Import Alert for better feedback
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -69,23 +70,31 @@ export default function CameraScreen() {
   if (!mediaPermission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={styles.permissionTitle}>Storage Access Needed</Text>
-        <Text style={styles.permissionMessage}>
-          We need your permission to save photos to your gallery.
-        </Text>
-        <TouchableOpacity
-          style={styles.permissionButton}
-          onPress={requestMediaPermission}
-        >
-          <LinearGradient
-            colors={["#6366f1", "#4f46e5"]}
-            style={styles.permissionButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        <View style={styles.permissionContainer}>
+          <MaterialIcons
+            name="photo-library"
+            size={64}
+            color="white"
+            style={styles.permissionIcon}
+          />
+          <Text style={styles.permissionTitle}>Storage Access Needed</Text>
+          <Text style={styles.permissionMessage}>
+            We need your permission to save photos to your gallery.
+          </Text>
+          <TouchableOpacity
+            style={styles.permissionButton}
+            onPress={requestMediaPermission}
           >
-            <Text style={styles.permissionButtonText}>Grant Permission</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              style={styles.permissionButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.permissionButtonText}>Grant Permission</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -113,12 +122,33 @@ export default function CameraScreen() {
 
       console.log("Picture taken with overlay:", uri);
 
-      // Save the captured image to the gallery
-      const asset = await MediaLibrary.createAssetAsync(uri);
-      console.log("Photo saved at:", asset.uri);
-      alert("Picture saved to gallery!");
+      if (uri) {
+        // Check if captureRef was successful
+        // Save the captured image to the gallery
+        const asset = await MediaLibrary.createAssetAsync(uri);
+        console.log("Photo saved at:", asset.uri);
+        Alert.alert(
+          "Picture Saved",
+          "Picture saved to gallery!",
+          [{ text: "OK", onPress: () => console.log("OK Pressed") }],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(
+          "Capture Failed",
+          "Failed to capture image. Please try again.",
+          [{ text: "OK", onPress: () => console.log("OK Pressed") }],
+          { cancelable: false }
+        );
+      }
     } catch (error) {
       console.error("Error capturing image:", error);
+      Alert.alert(
+        "Error",
+        "An error occurred while saving the picture.",
+        [{ text: "OK", onPress: () => console.log("OK Pressed") }],
+        { cancelable: false }
+      );
     }
   }
 
@@ -152,7 +182,7 @@ export default function CameraScreen() {
 
         {/* Sniper Scope Overlay */}
         <Image
-          source={require("../../assets/images/tempsniperlogo.png")}
+          source={require("../assets/image.png")}
           style={styles.sniperScope}
         />
 
@@ -187,7 +217,7 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    // justifyContent: "center", // REMOVE THIS to make camera full screen
   },
   permissionContainer: {
     flex: 1,
@@ -237,27 +267,27 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    position: "relative",
+    position: "relative", // Keep position relative for overlay to work
   },
   camera: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+    flex: 1, // Camera takes up the full cameraContainer
   },
   sniperScope: {
-    position: "absolute",
+    position: "absolute", // Overlay on top of camera
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     width: "100%",
     height: "100%",
-    resizeMode: "contain",
+    resizeMode: "contain", // Make sure it fits within the screen
+    zIndex: 1, // Ensure it's on top of the CameraView (though position: absolute should handle this usually)
   },
   overlay: {
     flex: 1,
     backgroundColor: "transparent",
     justifyContent: "space-between",
+    zIndex: 2, // Ensure buttons are on top of the scope
   },
   topButtons: {
     flexDirection: "row",
