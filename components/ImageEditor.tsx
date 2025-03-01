@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text, GestureResponderEvent, PanResponder } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, Text, PanResponder, Animated, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -11,50 +11,58 @@ interface ImageEditorProps {
 }
 
 export default function ImageEditor({ imageUri, onSave, onCancel }: ImageEditorProps) {
-  const [sniperPosition, setSniperPosition] = useState({ x: 0, y: 0 });
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const viewShotRef = useRef<ViewShot>(null);
+  const pan = useRef(new Animated.ValueXY()).current;
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (event: GestureResponderEvent) => {
-      const { locationX, locationY } = event.nativeEvent;
-      setSniperPosition({
-        x: Math.max(0, Math.min(locationX - 50, imageSize.width - 100)),
-        y: Math.max(0, Math.min(locationY - 50, imageSize.height - 100))
+    onPanResponderGrant: () => {
+      // Store the current position
+      pan.setOffset({
+        x: position.x,
+        y: position.y
       });
+      pan.setValue({ x: 0, y: 0 });
     },
+    onPanResponderMove: (_, gestureState: PanResponderGestureState) => {
+      // Update position state during movement
+      const newX = Math.max(0, Math.min(position.x + gestureState.dx, imageSize.width - 100));
+      const newY = Math.max(0, Math.min(position.y + gestureState.dy, imageSize.height - 100));
+      setPosition({ x: newX, y: newY });
+    },
+    onPanResponderRelease: () => {
+      pan.flattenOffset();
+    }
   });
 
   const handleImageLayout = (event: any) => {
     const { width, height } = event.nativeEvent.layout;
     setImageSize({ width, height });
     // Initially center the scope
-    setSniperPosition({ 
-      x: width / 2 - 50,
-      y: height / 2 - 50
-    });
+    const initialX = width / 2 - 50;
+    const initialY = height / 2 - 50;
+    setPosition({ x: initialX, y: initialY });
+    pan.setValue({ x: initialX, y: initialY });
   };
 
   const handleSave = async () => {
     try {
       if (!viewShotRef.current) return;
 
-      // Capture the view as it appears using captureRef
       const uri = await captureRef(viewShotRef, {
         format: 'jpg',
         quality: 0.8,
       });
       
-      // Optimize the image
       const result = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: 1080 } }],
         { format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 }
       );
 
-      // Save to gallery
       const asset = await MediaLibrary.createAssetAsync(result.uri);
       onSave(asset.uri);
     } catch (error) {
@@ -67,23 +75,30 @@ export default function ImageEditor({ imageUri, onSave, onCancel }: ImageEditorP
       <ViewShot 
         ref={viewShotRef}
         style={styles.imageContainer}
-        {...panResponder.panHandlers}
       >
         <Image
           source={{ uri: imageUri }}
           style={styles.image}
           onLayout={handleImageLayout}
         />
-        <Image
-          source={require('../assets/images/tempsniperlogo.png')}
+        <Animated.View
           style={[
-            styles.sniperScope,
+            styles.sniperScopeContainer,
             {
-              left: sniperPosition.x,
-              top: sniperPosition.y,
-            },
+              transform: [{
+                translateX: position.x
+              }, {
+                translateY: position.y
+              }]
+            }
           ]}
-        />
+          {...panResponder.panHandlers}
+        >
+          <Image
+            source={require('../assets/images/tempsniperlogo.png')}
+            style={styles.sniperScope}
+          />
+        </Animated.View>
       </ViewShot>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={onCancel}>
@@ -93,6 +108,7 @@ export default function ImageEditor({ imageUri, onSave, onCancel }: ImageEditorP
           <Text style={styles.buttonText}>Save</Text>
         </TouchableOpacity>
       </View>
+      <Text style={styles.dragHint}>Drag the scope to position it</Text>
     </View>
   );
 }
@@ -112,11 +128,16 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'contain',
   },
-  sniperScope: {
+  sniperScopeContainer: {
     position: 'absolute',
     width: 100,
     height: 100,
+  },
+  sniperScope: {
+    width: '100%',
+    height: '100%',
     resizeMode: 'contain',
+    tintColor: '#ff0000',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -137,5 +158,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  dragHint: {
+    color: 'white',
+    textAlign: 'center',
+    paddingBottom: 20,
+    opacity: 0.8,
   },
 });
