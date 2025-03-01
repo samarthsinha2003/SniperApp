@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { ThemedText } from "../../components/ThemedText";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColorScheme } from "../../hooks/useColorScheme";
@@ -209,17 +209,21 @@ export default function ShopScreen() {
       />
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#ff6f00" />{" "}
+          <ActivityIndicator size="large" color="#ff6f00" />
           {/* Vibrant loading color */}
         </View>
       )}
 
       <View style={styles.header}>
         <View>
-          <Text style={[styles.title, { color: "#fff" }]}>Shop</Text>
-          <Text style={[styles.points, { color: "rgba(255,255,255,0.8)" }]}>
+          <ThemedText style={[styles.title, { color: "#fff" }]}>
+            Shop
+          </ThemedText>
+          <ThemedText
+            style={[styles.points, { color: "rgba(255,255,255,0.8)" }]}
+          >
             {userPoints} Points
-          </Text>
+          </ThemedText>
         </View>
         <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
           <MaterialIcons name="logout" size={24} color="#fff" />
@@ -227,7 +231,9 @@ export default function ShopScreen() {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        <Text style={[styles.sectionTitle, { color: "#fff" }]}>Crosshairs</Text>
+        <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
+          Crosshairs
+        </ThemedText>
         <View style={styles.itemsGrid}>
           {shopItems
             .filter((item) => item.type === "crosshair")
@@ -251,27 +257,31 @@ export default function ShopScreen() {
                     color="#ff6f00" // Vibrant icon color
                   />
                 </View>
-                <Text
+                <ThemedText
                   style={[styles.itemName, { color: "#333" }]} // Darker item name
                 >
                   {item.name}
-                </Text>
-                <Text
+                </ThemedText>
+                <ThemedText
                   style={[
                     styles.itemDescription,
                     { color: "#555" }, // Darker description
                   ]}
                 >
                   {item.description}
-                </Text>
+                </ThemedText>
                 <View style={styles.priceTag}>
-                  <Text style={styles.priceText}>{item.price} Points</Text>
+                  <ThemedText style={styles.priceText}>
+                    {item.price} Points
+                  </ThemedText>
                 </View>
               </TouchableOpacity>
             ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: "#fff" }]}>Power-ups</Text>
+        <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
+          Power-ups
+        </ThemedText>
         <View style={styles.itemsGrid}>
           {shopItems
             .filter((item) => item.type === "powerup")
@@ -295,29 +305,31 @@ export default function ShopScreen() {
                     color="#ff6f00" // Vibrant icon color
                   />
                 </View>
-                <Text
+                <ThemedText
                   style={[styles.itemName, { color: "#333" }]} // Darker item name
                 >
                   {item.name}
-                </Text>
-                <Text
+                </ThemedText>
+                <ThemedText
                   style={[
                     styles.itemDescription,
                     { color: "#555" }, // Darker description
                   ]}
                 >
                   {item.description}
-                </Text>
+                </ThemedText>
                 <View style={styles.priceTag}>
-                  <Text style={styles.priceText}>{item.price} Points</Text>
+                  <ThemedText style={styles.priceText}>
+                    {item.price} Points
+                  </ThemedText>
                 </View>
               </TouchableOpacity>
             ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: "#fff" }]}>
+        <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
           Sniper Logos
-        </Text>
+        </ThemedText>
         <View style={styles.itemsGrid}>
           {shopItems
             .filter((item) => item.type === "logo")
@@ -341,21 +353,23 @@ export default function ShopScreen() {
                     color="#ff6f00" // Vibrant icon color
                   />
                 </View>
-                <Text
+                <ThemedText
                   style={[styles.itemName, { color: "#333" }]} // Darker item name
                 >
                   {item.name}
-                </Text>
-                <Text
+                </ThemedText>
+                <ThemedText
                   style={[
                     styles.itemDescription,
                     { color: "#555" }, // Darker description
                   ]}
                 >
                   {item.description}
-                </Text>
+                </ThemedText>
                 <View style={styles.priceTag}>
-                  <Text style={styles.priceText}>{item.price} Points</Text>
+                  <ThemedText style={styles.priceText}>
+                    {item.price} Points
+                  </ThemedText>
                 </View>
               </TouchableOpacity>
             ))}
