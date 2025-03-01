@@ -217,7 +217,7 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // justifyContent: "center", // REMOVE THIS to make camera full screen
+    backgroundColor: "black", // Ensure black background
   },
   permissionContainer: {
     flex: 1,
@@ -267,21 +267,26 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    position: "relative", // Keep position relative for overlay to work
+    width: "100%",
+    height: "100%", // Ensure full height
+    position: "relative",
   },
   camera: {
-    flex: 1, // Camera takes up the full cameraContainer
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   sniperScope: {
-    position: "absolute", // Overlay on top of camera
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     width: "100%",
     height: "100%",
-    resizeMode: "contain", // Make sure it fits within the screen
-    zIndex: 1, // Ensure it's on top of the CameraView (though position: absolute should handle this usually)
+    resizeMode: "contain",
   },
   overlay: {
     flex: 1,

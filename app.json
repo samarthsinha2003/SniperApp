@@ -3,7 +3,6 @@
     "name": "sniper-app",
     "slug": "sniper-app",
     "version": "1.0.0",
-    "orientation": "portrait",
     "icon": "./assets/images/favicon.jpeg",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
@@ -12,11 +11,9 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+      "softwareKeyboardLayoutMode": "pan"
     },
+    "orientation": "portrait",
     "web": {
       "bundler": "metro",
       "output": "static",
