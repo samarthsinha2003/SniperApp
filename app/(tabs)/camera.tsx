@@ -1,5 +1,5 @@
-import { CameraView, type CameraType, useCameraPermissions } from "expo-camera";
-import { useState } from "react";
+import React, { useState } from "react";
+import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function CameraScreen() {
@@ -12,13 +12,13 @@ export default function CameraScreen() {
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet
+    // Request camera permission
     return (
       <View style={styles.container}>
         <Text style={styles.message}>
-          We need your permission to show the camera
+          We need your permission to use the camera
         </Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Button onPress={requestPermission} title="Grant Permission" />
       </View>
     );
   }
@@ -27,12 +27,19 @@ export default function CameraScreen() {
     setFacing((current) => (current === "back" ? "front" : "back"));
   }
 
+  async function takePicture() {
+    console.log("Picture taken!"); // For now, just log that the button works
+  }
+
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} facing={facing}>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
             <Text style={styles.text}>Flip Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={takePicture}>
+            <Text style={styles.text}>Take Picture</Text>
           </TouchableOpacity>
         </View>
       </CameraView>
@@ -57,14 +64,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "transparent",
     margin: 64,
+    alignItems: "flex-end",
+    justifyContent: "space-between",
   },
   button: {
-    flex: 1,
-    alignSelf: "flex-end",
+    flex: 0.45,
     alignItems: "center",
+    backgroundColor: "#00000080",
+    padding: 10,
+    borderRadius: 5,
   },
   text: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "bold",
     color: "white",
   },
