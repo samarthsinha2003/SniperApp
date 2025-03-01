@@ -7,14 +7,13 @@ import {
   View,
   useColorScheme,
   Platform,
-  Image,
-  Alert, // Import Alert for better feedback
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as MediaLibrary from "expo-media-library";
-import { captureRef } from "react-native-view-shot"; // Capture the camera + overlay
+import { captureRef } from "react-native-view-shot";
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
@@ -23,8 +22,8 @@ export default function CameraScreen() {
     MediaLibrary.usePermissions();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const cameraContainerRef = useRef<View>(null); // Ref to capture view
-  const cameraRef = useRef<CameraView>(null); // Camera reference
+  const cameraContainerRef = useRef<View>(null);
+  const cameraRef = useRef<CameraView>(null);
 
   if (!permission || !mediaPermission) {
     return <View style={styles.container} />;
@@ -110,7 +109,6 @@ export default function CameraScreen() {
     }
 
     try {
-      // Take the photo first
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         skipProcessing: true,
@@ -120,14 +118,12 @@ export default function CameraScreen() {
         throw new Error("Failed to take photo");
       }
 
-      // Now capture the entire view including the overlay
       const finalUri = await captureRef(cameraContainerRef, {
         format: "jpg",
         quality: 0.8,
         result: "tmpfile",
       });
 
-      // Save the final image to the gallery
       if (finalUri) {
         const asset = await MediaLibrary.createAssetAsync(finalUri);
         console.log("Photo saved successfully at:", asset.uri);
@@ -168,20 +164,19 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Attach ref to ensure captureRef() works */}
       <View
         ref={cameraContainerRef}
         collapsable={false}
         style={styles.cameraContainer}
       >
-        {/* Camera Feed */}
         <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
 
-        {/* Sniper Scope Overlay */}
-        <Image
-          source={require("../../assets/images/tempsniperlogo.png")}
-          style={styles.sniperScope}
-        />
+        {/* CSS Sniper Scope Overlay */}
+        <View style={styles.sniperScope}>
+          <View style={styles.sniperLineHorizontal} />
+          <View style={styles.sniperLineVertical} />
+          <View style={styles.sniperDot} />
+        </View>
 
         <View style={styles.overlay}>
           <View style={styles.topButtons}>
@@ -214,59 +209,14 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "black", // Ensure black background
-  },
-  permissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  permissionIcon: {
-    marginBottom: 20,
-  },
-  permissionTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  permissionMessage: {
-    fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    textAlign: "center",
-    marginBottom: 30,
-    lineHeight: 24,
-  },
-  permissionButton: {
-    width: "100%",
-    maxWidth: 300,
-    borderRadius: 12,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  permissionButtonGradient: {
-    padding: 16,
-    alignItems: "center",
-  },
-  permissionButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+    backgroundColor: "black",
   },
   cameraContainer: {
     flex: 1,
     width: "100%",
-    height: "100%", // Ensure full height
+    height: "100%",
     position: "relative",
+    overflow: "hidden", // Clip overflow from sniper scope
   },
   camera: {
     position: "absolute",
@@ -281,15 +231,33 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2, // Ensure it's on top
+  },
+  sniperLineHorizontal: {
+    position: "absolute",
     width: "100%",
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  sniperLineVertical: {
+    position: "absolute",
+    width: 1,
     height: "100%",
-    resizeMode: "contain",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  sniperDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "white",
   },
   overlay: {
     flex: 1,
     backgroundColor: "transparent",
     justifyContent: "space-between",
-    zIndex: 2, // Ensure buttons are on top of the scope
+    zIndex: 3, // Ensure buttons are on top of the scope
   },
   topButtons: {
     flexDirection: "row",
@@ -337,9 +305,50 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(0, 0, 0, 0.1)",
   },
-  text: {
-    fontSize: 18,
+  permissionContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  permissionIcon: {
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 24,
     fontWeight: "bold",
     color: "white",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  permissionMessage: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  permissionButton: {
+    width: "100%",
+    maxWidth: 300,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  permissionButtonGradient: {
+    padding: 16,
+    alignItems: "center",
+  },
+  permissionButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
