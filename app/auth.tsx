@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resetButtonText: {
-    color: "#4f46e5",
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   switchButtonText: {
-    color: "#4f46e5",
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 16,
     fontWeight: "bold",
   },
