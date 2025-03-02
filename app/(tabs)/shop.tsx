@@ -233,54 +233,6 @@ export default function ShopScreen() {
 
       <ScrollView style={styles.scrollView}>
         <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
-          Crosshairs
-        </ThemedText>
-        <View style={styles.itemsGrid}>
-          {shopItems
-            .filter((item) => item.type === "crosshair")
-            .map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.itemCard,
-                  {
-                    backgroundColor: "rgba(255,255,255,0.9)", // Brighter item card background
-                    opacity: userPoints >= item.price ? 1 : 0.5,
-                  },
-                ]}
-                onPress={() => handlePurchase(item)}
-                disabled={userPoints < item.price}
-              >
-                <View style={styles.itemIcon}>
-                  <MaterialIcons
-                    name={item.icon as any}
-                    size={36} // Slightly larger icons
-                    color="#ff6f00" // Vibrant icon color
-                  />
-                </View>
-                <ThemedText
-                  style={[styles.itemName, { color: "#333" }]} // Darker item name
-                >
-                  {item.name}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.itemDescription,
-                    { color: "#555" }, // Darker description
-                  ]}
-                >
-                  {item.description}
-                </ThemedText>
-                <View style={styles.priceTag}>
-                  <ThemedText style={styles.priceText}>
-                    {item.price} Points
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
-        </View>
-
-        <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
           Power-ups
         </ThemedText>
         <View style={styles.itemsGrid}>
