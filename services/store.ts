@@ -137,31 +137,34 @@ export const store = {
         throw new Error("Item not found or already used");
       }
 
-      // Find the store item to get its effect
-      const storeItem = shopItems.find((item: StoreItem) => item.id === itemId);
-      if (!storeItem || !storeItem.effect) {
+      // Find the store item to get its type and effect
+      const storeItem = shopItems.find((item) => item.id === itemId);
+      if (!storeItem) {
         throw new Error("Invalid item");
       }
 
-      // Mark item as used in inventory
-      const updatedInventory = [...inventory];
-      updatedInventory[itemIndex] = {
-        ...updatedInventory[itemIndex],
-        used: true,
-      };
+      // Handle differently based on item type
+      if (storeItem.type === "logo") {
+        // For logos, don't mark as used, just update the active logo
+        await updateDoc(userRef, {
+          activeLogo: itemId
+        });
+      } else {
+        // For other items (powerups, etc.), mark as used
+        const updatedInventory = [...inventory];
+        updatedInventory[itemIndex] = {
+          ...updatedInventory[itemIndex],
+          used: true,
+        };
 
-      await updateDoc(userRef, {
-        inventory: updatedInventory,
-      });
-
-      // Activate powerup if it's a powerup item
-      if (storeItem.type === "powerup") {
-        await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
+        await updateDoc(userRef, {
+          inventory: updatedInventory,
+        });
       }
 
       return true;
     } catch (error) {
-      console.error("Failed to use item:", error);
+      console.error("Use item failed:", error);
       return false;
     }
   },
