@@ -7,6 +7,8 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { User, Group } from "./groups";
+import { powerupsService } from "./powerups";
+import { shopItems } from "../app/(tabs)/shop";
 
 export interface StoreItem {
   id: string;
@@ -128,6 +130,13 @@ export const store = {
         throw new Error("Item not found or already used");
       }
 
+      // Find the store item to get its effect
+      const storeItem = shopItems.find((item: StoreItem) => item.id === itemId);
+      if (!storeItem || !storeItem.effect) {
+        throw new Error("Invalid item");
+      }
+
+      // Mark item as used in inventory
       const updatedInventory = [...inventory];
       updatedInventory[itemIndex] = {
         ...updatedInventory[itemIndex],
@@ -137,6 +146,11 @@ export const store = {
       await updateDoc(userRef, {
         inventory: updatedInventory,
       });
+
+      // Activate powerup if it's a powerup item
+      if (storeItem.type === "powerup") {
+        await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
+      }
 
       return true;
     } catch (error) {

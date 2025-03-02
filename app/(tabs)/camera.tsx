@@ -238,11 +238,16 @@ export default function CameraScreen() {
         if (snipeDoc.exists()) {
           const snipeData = snipeDoc.data() as Snipe;
           if (snipeData.status === "pending") {
-            // If not dodged, award point to sniper
+            // If not dodged, award points to sniper based on powerups
             await updateDoc(doc(db, "snipes", snipeId), {
               status: "completed",
             });
-            await groupsService.updatePoints(target.groupId, user.id, 1);
+
+            // Get final points value from snipe
+            const points = snipeData.points || 1; // Default to 10 if not set
+            await groupsService.updatePoints(target.groupId, user.id, points);
+            Alert.alert("Success", `You earned ${points} points!`);
+
             loadTargets(); // Refresh targets to update points
             setCountdownEndTime(null);
           }
@@ -301,7 +306,10 @@ export default function CameraScreen() {
         <>
           <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
           <View style={styles.topButtons}>
-            <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={toggleCameraType}
+            >
               <Ionicons name="camera-reverse" size={30} color="white" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
@@ -309,7 +317,10 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.captureContainer}>
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={takePicture}
+            >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
           </View>

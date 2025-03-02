@@ -11,6 +11,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { powerupsService } from "./powerups";
 
 export interface Snipe {
   id: string;
@@ -20,6 +21,12 @@ export interface Snipe {
   timestamp: Timestamp;
   status: "pending" | "completed" | "dodged";
   photoUri: string;
+  points?: number;
+  powerups?: {
+    doublePoints?: boolean;
+    shield?: boolean;
+    halfPoints?: boolean;
+  };
 }
 
 const DODGE_WINDOW_MS = 5000; // 5 seconds in milliseconds
@@ -34,6 +41,31 @@ export const snipesService = {
     const snipesRef = collection(db, "snipes");
     const snipeDoc = doc(snipesRef);
 
+    // Check for active powerups
+    const hasDoublePoints = await powerupsService.checkActivePowerup(
+      sniperId,
+      "double_points"
+    );
+    const hasHalfPoints = await powerupsService.checkActivePowerup(
+      targetId,
+      "half_points"
+    ); // Target might have half points active
+    const hasShield = await powerupsService.checkActivePowerup(
+      targetId,
+      "shield"
+    );
+
+    // Calculate base points (10 for successful snipe)
+    let points = 10;
+    if (hasDoublePoints) {
+      points *= 2;
+      await powerupsService.consumePowerup(sniperId, "double_points");
+    }
+    if (hasHalfPoints) {
+      points *= 0.5;
+      await powerupsService.consumePowerup(targetId, "half_points");
+    }
+
     const newSnipe: Snipe = {
       id: snipeDoc.id,
       sniperId,
@@ -42,6 +74,12 @@ export const snipesService = {
       timestamp: Timestamp.now(),
       status: "pending",
       photoUri,
+      points,
+      powerups: {
+        doublePoints: hasDoublePoints,
+        shield: hasShield,
+        halfPoints: hasHalfPoints,
+      },
     };
 
     await setDoc(snipeDoc, newSnipe);
@@ -50,31 +88,62 @@ export const snipesService = {
 
   async dodgeSnipe(snipeId: string, targetId: string): Promise<boolean> {
     const snipeRef = doc(db, "snipes", snipeId);
-    const snipeDoc = await getDoc(snipeRef);
+    const userRef = doc(db, "users", targetId);
+
+    const [snipeDoc, userDoc] = await Promise.all([
+      getDoc(snipeRef),
+      getDoc(userRef),
+    ]);
 
     if (!snipeDoc.exists()) {
       throw new Error("Snipe not found");
     }
 
+    if (!userDoc.exists()) {
+      throw new Error("User not found");
+    }
+
     const snipe = snipeDoc.data() as Snipe;
+    const userData = userDoc.data();
 
     // Verify this user is the target
     if (snipe.targetId !== targetId) {
       throw new Error("User is not the target of this snipe");
     }
 
-    // Check if within dodge window
-    const now = new Date();
-    const snipeTime = snipe.timestamp.toDate();
-    const timeDiff = now.getTime() - snipeTime.getTime();
+    // Check for shield powerup
+    const hasShield = snipe.powerups?.shield || false;
+    let pointsToAdd = 5; // Base points for successful dodge
 
-    if (timeDiff > DODGE_WINDOW_MS) {
-      throw new Error("Dodge window has expired");
+    if (hasShield) {
+      // If shielded, consume the shield and award points
+      await powerupsService.consumePowerup(targetId, "shield");
+      pointsToAdd = 10; // More points for shielded dodge
+
+      await updateDoc(snipeRef, {
+        status: "dodged",
+        "powerups.shield": false,
+      });
+    } else {
+      // Check if within dodge window
+      const now = new Date();
+      const snipeTime = snipe.timestamp.toDate();
+      const timeDiff = now.getTime() - snipeTime.getTime();
+
+      if (timeDiff > DODGE_WINDOW_MS) {
+        throw new Error("Dodge window has expired");
+      }
+
+      // Update snipe status to dodged
+      await updateDoc(snipeRef, {
+        status: "dodged",
+      });
     }
 
-    // Update snipe status to dodged
-    await updateDoc(snipeRef, {
-      status: "dodged",
+    // Award points for successful dodge
+    const currentPoints = userData.points || 0;
+    await updateDoc(userRef, {
+      points: currentPoints + pointsToAdd,
     });
 
     return true;
