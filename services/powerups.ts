@@ -36,7 +36,26 @@ export const powerupsService = {
 
     const duration = shopItem.duration || 1;
 
-    // Add new powerup
+    // Check if user already has an active powerup of this type
+    const hasActivePowerup = currentPowerups.some(
+      (p) => p.type === type && p.remainingUses > 0
+    );
+    if (hasActivePowerup) {
+      throw new Error(`You already have an active ${type} powerup`);
+    }
+
+    // Add new powerup with appropriate remaining uses
+    const getRemainingUses = (powerupType: ActivePowerup["type"]) => {
+      switch (powerupType) {
+        case "double_points":
+          return 2;
+        case "half_points":
+          return 3;
+        default:
+          return 1;
+      }
+    };
+
     const newPowerup: ActivePowerup = {
       id: powerupId,
       type,

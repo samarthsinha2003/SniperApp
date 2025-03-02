@@ -175,23 +175,31 @@ export const store = {
         await updateDoc(userRef, {
           inventory: updatedInventory,
         });
-      } else {
-        // For other items, just mark as used
-        const updatedInventory = [...inventory];
-        updatedInventory[itemIndex] = {
-          ...updatedInventory[itemIndex],
-          used: true,
-        };
+      } else if (storeItem.type === "powerup" && storeItem.effect) {
+        // For powerups, try to activate it
+        try {
+          await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
+          
+          // Mark item as used only after successful activation
+          const updatedInventory = [...inventory];
+          updatedInventory[itemIndex] = {
+            ...updatedInventory[itemIndex],
+            used: true,
+          };
 
-        await updateDoc(userRef, {
-          inventory: updatedInventory,
-        });
+          await updateDoc(userRef, {
+            inventory: updatedInventory,
+          });
+        } catch (error) {
+          // If activation fails (e.g. already has active powerup), propagate error
+          throw error;
+        }
       }
 
       return true;
     } catch (error) {
       console.error("Use item failed:", error);
-      return false;
+      throw error; // Propagate error to show proper message to user
     }
   },
 };
