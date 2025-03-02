@@ -105,34 +105,28 @@ export const snipesService = {
       throw new Error("User is not the target of this snipe");
     }
 
+    // Check if within dodge window
+    const now = new Date();
+    const snipeTime = snipe.timestamp.toDate();
+    const timeDiff = now.getTime() - snipeTime.getTime();
+
+    if (timeDiff > DODGE_WINDOW_MS) {
+      throw new Error("Dodge window has expired");
+    }
+
     // Check for shield powerup
     const hasShield = snipe.powerups?.shield || false;
     let pointsToAdd = 5; // Base points for successful dodge
 
     if (hasShield) {
-      // If shielded, consume the shield and award points
-      await powerupsService.consumePowerup(targetId, "shield");
       pointsToAdd = 10; // More points for shielded dodge
-
-      await updateDoc(snipeRef, {
-        status: "dodged",
-        "powerups.shield": false,
-      });
-    } else {
-      // Check if within dodge window
-      const now = new Date();
-      const snipeTime = snipe.timestamp.toDate();
-      const timeDiff = now.getTime() - snipeTime.getTime();
-
-      if (timeDiff > DODGE_WINDOW_MS) {
-        throw new Error("Dodge window has expired");
-      }
-
-      // Update snipe status to dodged
-      await updateDoc(snipeRef, {
-        status: "dodged",
-      });
     }
+
+    // Update snipe status to dodged
+    await updateDoc(snipeRef, {
+      status: "dodged",
+      ...(hasShield && { "powerups.shield": true }), // Keep shield status true if they had it
+    });
 
     // Award points for successful dodge
     const currentPoints = userData.points || 0;
