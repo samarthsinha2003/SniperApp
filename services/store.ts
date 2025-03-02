@@ -105,13 +105,31 @@ export const store = {
         }
 
         newPoints = currentPoints - item.price;
+
+        // Get current inventory
+        const currentInventory = userData?.inventory || [];
+
+        // For powerups, check if unused one exists
+        if (item.type === "powerup") {
+          const hasUnusedPowerup = currentInventory.some(
+            (invItem: any) => invItem.id === item.id && !invItem.used
+          );
+          if (hasUnusedPowerup) {
+            throw new Error("You already have an unused powerup of this type");
+          }
+        }
+
+        // Add new item to inventory
         const updateData: any = {
           points: newPoints,
-          inventory: arrayUnion({
-            id: item.id,
-            purchasedAt: Date.now(),
-            used: false,
-          }),
+          inventory: [
+            ...currentInventory,
+            {
+              id: item.id,
+              purchasedAt: Date.now(),
+              used: false,
+            },
+          ],
         };
 
         // If it's a logo item, set it as the active logo
@@ -162,24 +180,14 @@ export const store = {
           activeLogo: itemId,
         });
       } else if (storeItem.type === "powerup" && storeItem.effect) {
-        // For powerups, activate the powerup first
-        await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
-
-        // Then mark as used in inventory
-        const updatedInventory = [...inventory];
-        updatedInventory[itemIndex] = {
-          ...updatedInventory[itemIndex],
-          used: true,
-        };
-
-        await updateDoc(userRef, {
-          inventory: updatedInventory,
-        });
-      } else if (storeItem.type === "powerup" && storeItem.effect) {
-        // For powerups, try to activate it
         try {
-          await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
-          
+          // For powerups, activate the powerup first
+          await powerupsService.activatePowerup(
+            userId,
+            itemId,
+            storeItem.effect
+          );
+
           // Mark item as used only after successful activation
           const updatedInventory = [...inventory];
           updatedInventory[itemIndex] = {

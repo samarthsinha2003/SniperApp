@@ -165,19 +165,28 @@ export default function InventoryScreen() {
   const renderInventorySection = (type: "crosshair" | "powerup" | "logo") => {
     if (!inventory) return null;
 
-    // Filter out used powerups that have no remaining uses
-    const items = inventory.items.filter((item) => {
+    // Filter and deduplicate items
+    const items = inventory.items.reduce((acc: any[], item) => {
       const storeItem = shopItems.find((si: StoreItem) => si.id === item.id);
-      if (!storeItem) return false;
+      if (!storeItem) return acc;
 
-      if (storeItem.type === "powerup" && item.used) {
-        // Check if powerup still has remaining uses
-        const activePowerup = activePowerups.find((p) => p.id === item.id);
-        return activePowerup && activePowerup.remainingUses > 0;
+      // Check if this is the type we want
+      if (storeItem.type !== type) return acc;
+
+      // For powerups, only show active ones with remaining uses
+      if (storeItem.type === "powerup") {
+        if (item.used) {
+          const activePowerup = activePowerups.find((p) => p.id === item.id);
+          if (!activePowerup || activePowerup.remainingUses <= 0) return acc;
+        }
+
+        // Check if we already have this powerup in our accumulator
+        const existingPowerup = acc.find((i) => i.id === item.id);
+        if (existingPowerup) return acc;
       }
 
-      return storeItem.type === type;
-    });
+      return [...acc, item];
+    }, []);
 
     if (items.length === 0) return null;
 
