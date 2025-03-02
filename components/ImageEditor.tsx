@@ -145,7 +145,9 @@ export default function ImageEditor({
                 ? logoMap[activeLogo]
                 : require("../assets/images/tempsniperlogo.png")
             }
-            style={activeLogo ? styles.sniperScope : styles.redTintedScope}
+            style={[
+              activeLogo && activeLogo !== 'default' ? styles.sniperScope : styles.redTintedScope
+            ]}
           />
         </Animated.View>
       </ViewShot>
