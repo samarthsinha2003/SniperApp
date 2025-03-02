@@ -34,8 +34,25 @@ export const powerupsService = {
     const hasActivePowerup = currentPowerups.some(
       (p) => p.type === type && p.remainingUses > 0
     );
-    if (hasActivePowerup) {
-      throw new Error("Item already in use.");
+
+    // For shield powerups, we'll stack them by adding to remainingUses if one is active
+    if (hasActivePowerup && type === "shield") {
+      const existingShield = currentPowerups.find(
+        (p) => p.type === "shield" && p.remainingUses > 0
+      );
+      if (existingShield) {
+        const updatedPowerups = currentPowerups.map((p) =>
+          p.id === existingShield.id
+            ? { ...p, remainingUses: p.remainingUses + 1 }
+            : p
+        );
+        await updateDoc(userRef, {
+          activePowerups: updatedPowerups,
+        });
+        return;
+      }
+    } else if (hasActivePowerup) {
+      throw new Error("Item currently in use.");
     }
 
     // Add new powerup with appropriate remaining uses
