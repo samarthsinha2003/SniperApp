@@ -29,7 +29,7 @@ export interface Snipe {
   };
 }
 
-const DODGE_WINDOW_MS = 5000; // 5 seconds in milliseconds
+const DODGE_WINDOW_MS = 20000; // 20 seconds in milliseconds
 
 export const snipesService = {
   async createSnipe(
@@ -55,8 +55,8 @@ export const snipesService = {
       "shield"
     );
 
-    // Calculate base points (10 for successful snipe)
-    let points = 10;
+    // Calculate base points (1 for successful snipe)
+    let points = 1;
     if (hasDoublePoints) {
       points *= 2;
       await powerupsService.consumePowerup(sniperId, "double_points");

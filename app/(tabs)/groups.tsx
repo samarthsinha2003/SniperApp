@@ -19,6 +19,7 @@ import { useColorScheme } from "../../hooks/useColorScheme";
 import { groupsService, type Group } from "../../services/groups";
 import * as Clipboard from "expo-clipboard";
 import { JoinGroupDialog } from "../../components/JoinGroupDialog";
+import { CreateGroupDialog } from "../../components/CreateGroupDialog";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function GroupsScreen() {
@@ -27,7 +28,6 @@ export default function GroupsScreen() {
   const isDark = colorScheme === "dark"; // While we are forcing light theme look, this is still good to have
   const [groups, setGroups] = useState<Group[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
   const [loading, setLoading] = useState(true);
   const [showJoinDialog, setShowJoinDialog] = useState(false);
   const formAnimation = new Animated.Value(showNewGroup ? 1 : 0);
@@ -112,23 +112,19 @@ export default function GroupsScreen() {
     }
   };
 
-  const createGroup = async () => {
+  const createGroup = async (name: string) => {
     if (!user) return;
 
-    if (newGroupName.trim() === "") {
+    if (name.trim() === "") {
       Alert.alert("Error", "Please enter a group name");
       return;
     }
 
     try {
       setLoading(true);
-      const newGroup = await groupsService.createGroup(
-        newGroupName.trim(),
-        user.id
-      );
+      const newGroup = await groupsService.createGroup(name.trim(), user.id);
       setGroups([...groups, newGroup]);
       setupGroupListener(newGroup.id);
-      setNewGroupName("");
       setShowNewGroup(false);
     } catch (error) {
       console.error("Error creating group:", error);
@@ -278,85 +274,139 @@ export default function GroupsScreen() {
                           {member.name}
                         </ThemedText>
                       </View>
-                      <View style={styles.pointsBadge}>
-                        <ThemedText style={[styles.points, { color: "#fff" }]}>
-                          {member.points}
+                      <View style={styles.memberActionsContainer}>
+                        <View style={styles.pointsBadge}>
                           <ThemedText
-                            style={[styles.pointsUnit, { color: "#fff" }]}
+                            style={[styles.points, { color: "#fff" }]}
                           >
-                            {" Points"}
+                            {member.points}
+                            <ThemedText
+                              style={[styles.pointsUnit, { color: "#fff" }]}
+                            >
+                              {" Points"}
+                            </ThemedText>
                           </ThemedText>
-                        </ThemedText>
+                        </View>
+                        {user?.id !== member.id && (
+                          <TouchableOpacity
+                            style={styles.accuseButton}
+                            onPress={() => {
+                              Alert.alert(
+                                "Accuse Member",
+                                `Are you sure you want to accuse ${member.name} of lying about a snipe?`,
+                                [
+                                  { text: "Cancel", style: "cancel" },
+                                  {
+                                    text: "Accuse",
+                                    style: "destructive",
+                                    onPress: async () => {
+                                      try {
+                                        if (user) {
+                                          await groupsService.accuseMember(
+                                            group.id,
+                                            user.id,
+                                            member.id
+                                          );
+                                        }
+                                      } catch (error: any) {
+                                        Alert.alert("Error", error.message);
+                                      }
+                                    },
+                                  },
+                                ]
+                              );
+                            }}
+                          >
+                            <MaterialIcons
+                              name="gavel"
+                              size={20}
+                              color="#ff6f00"
+                            />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     </View>
                   ))}
                 </View>
+                {group.activeAccusation && user && (
+                  <View style={[styles.accusationCard]}>
+                    <ThemedText style={[styles.accusationText]}>
+                      {group.members.find(
+                        (m) => m.id === group.activeAccusation?.accuserId
+                      )?.name || ""}{" "}
+                      has accused{" "}
+                      {group.members.find(
+                        (m) => m.id === group.activeAccusation?.accusedId
+                      )?.name || ""}{" "}
+                      of lying about a snipe!
+                    </ThemedText>
+                    {group.activeAccusation &&
+                      user.id !== group.activeAccusation.accusedId &&
+                      !group.activeAccusation.votes?.[user.id] && (
+                        <View style={[styles.voteButtonsContainer]}>
+                          <TouchableOpacity
+                            style={[styles.voteButton, styles.voteYes]}
+                            onPress={async () => {
+                              try {
+                                await groupsService.voteOnAccusation(
+                                  group.id,
+                                  user.id,
+                                  true
+                                );
+                              } catch (error: any) {
+                                Alert.alert("Error", error.message);
+                              }
+                            }}
+                          >
+                            <ThemedText style={styles.voteButtonText}>
+                              Agree
+                            </ThemedText>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.voteButton, styles.voteNo]}
+                            onPress={async () => {
+                              try {
+                                await groupsService.voteOnAccusation(
+                                  group.id,
+                                  user.id,
+                                  false
+                                );
+                              } catch (error: any) {
+                                Alert.alert("Error", error.message);
+                              }
+                            }}
+                          >
+                            <ThemedText style={styles.voteButtonText}>
+                              Disagree
+                            </ThemedText>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    {group.activeAccusation &&
+                      user &&
+                      group.activeAccusation.votes?.[user.id] !== undefined && (
+                        <ThemedText style={styles.votedText}>
+                          You have cast your vote
+                        </ThemedText>
+                      )}
+                  </View>
+                )}
               </View>
             ))}
           </ScrollView>
 
-          <Animated.View
-            style={[
-              styles.newGroupFormContainer,
-              {
-                opacity: formAnimation,
-                transform: [
-                  {
-                    translateY: formAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-20, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            pointerEvents={showNewGroup ? "auto" : "none"}
-          >
-            {showNewGroup && (
-              <View style={[styles.newGroupForm]}>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: "#fff",
-                      backgroundColor: "rgba(255,255,255,0.2)",
-                    },
-                  ]}
-                  value={newGroupName}
-                  onChangeText={setNewGroupName}
-                  placeholder="Enter team name"
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  selectionColor="#fff"
-                />
-                <View style={styles.formButtons}>
-                  <TouchableOpacity
-                    style={[styles.formButton, styles.cancelButton]}
-                    onPress={() => {
-                      setShowNewGroup(false);
-                      setNewGroupName("");
-                    }}
-                  >
-                    <ThemedText style={[styles.buttonText, { color: "#fff" }]}>
-                      Cancel
-                    </ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.formButton, styles.createButton]}
-                    onPress={createGroup}
-                  >
-                    <LinearGradient
-                      colors={["#ff6f00", "#ff8f00"]}
-                      style={styles.buttonGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <ThemedText style={styles.buttonText}>Create</ThemedText>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </Animated.View>
+          <CreateGroupDialog
+            visible={showNewGroup}
+            onClose={() => setShowNewGroup(false)}
+            onSubmit={async (name) => {
+              try {
+                await createGroup(name);
+              } catch (error) {
+                console.error("Error creating group:", error);
+                Alert.alert("Error", "Failed to create group");
+              }
+            }}
+          />
 
           <JoinGroupDialog
             visible={showJoinDialog}
@@ -388,7 +438,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === "ios" ? 60 : 50,
     paddingBottom: 20,
   },
   title: {
@@ -629,5 +679,63 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  memberActionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  accuseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 111, 0, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  accusationCard: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: "rgba(255, 111, 0, 0.1)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 111, 0, 0.3)",
+  },
+  accusationText: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  voteButtonsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 15,
+    marginTop: 10,
+  },
+  voteButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  voteYes: {
+    backgroundColor: "#4CAF50",
+  },
+  voteNo: {
+    backgroundColor: "#f44336",
+  },
+  voteButtonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  votedText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 10,
+    fontStyle: "italic",
   },
 });

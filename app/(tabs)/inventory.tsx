@@ -12,6 +12,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../contexts/AuthContext";
 import { store, UserInventory, StoreItem } from "../../services/store";
 import { shopItems } from "./shop";
+import { onSnapshot, doc } from "firebase/firestore";
+import { db } from "../../config/firebase";
 
 export default function InventoryScreen() {
   const { user } = useAuth();
@@ -19,7 +21,25 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) return;
+
+    // Initial load
     loadInventory();
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(doc(db, "users", user.id), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        setInventory({
+          points: userData.points || 0,
+          items: userData.inventory || [],
+        });
+      }
+      setLoading(false);
+    });
+
+    // Cleanup listener
+    return () => unsubscribe();
   }, [user?.id]);
 
   const loadInventory = async () => {
@@ -30,8 +50,6 @@ export default function InventoryScreen() {
     } catch (error) {
       console.error("Failed to load inventory:", error);
       Alert.alert("Error", "Failed to load inventory");
-    } finally {
-      setLoading(false);
     }
   };
 

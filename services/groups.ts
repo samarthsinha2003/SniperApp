@@ -35,6 +35,12 @@ export interface Group {
     points: number;
   }[];
   inviteCode: string;
+  activeAccusation?: {
+    accusedId: string;
+    accuserId: string;
+    votes: { [userId: string]: boolean };
+    timestamp: number;
+  };
 }
 
 export const groupsService = {
@@ -187,5 +193,96 @@ export const groupsService = {
     await updateDoc(userRef, {
       groups: arrayRemove(groupId),
     });
+  },
+
+  async accuseMember(
+    groupId: string,
+    accuserId: string,
+    accusedId: string
+  ): Promise<void> {
+    const groupRef = doc(db, "groups", groupId);
+    const groupDoc = await getDoc(groupRef);
+
+    if (!groupDoc.exists()) {
+      throw new Error("Group not found");
+    }
+
+    const group = groupDoc.data() as Group;
+
+    // Check if there's already an active accusation
+    if (group.activeAccusation) {
+      throw new Error("There is already an active accusation in this group");
+    }
+
+    // Check if accuser and accused are in the group
+    if (
+      !group.members.some((m) => m.id === accuserId) ||
+      !group.members.some((m) => m.id === accusedId)
+    ) {
+      throw new Error("Invalid member IDs");
+    }
+
+    // Create new accusation
+    await updateDoc(groupRef, {
+      activeAccusation: {
+        accusedId,
+        accuserId,
+        votes: { [accuserId]: true }, // Accuser automatically votes yes
+        timestamp: Date.now(),
+      },
+    });
+  },
+
+  async voteOnAccusation(
+    groupId: string,
+    voterId: string,
+    vote: boolean
+  ): Promise<void> {
+    const groupRef = doc(db, "groups", groupId);
+    const groupDoc = await getDoc(groupRef);
+
+    if (!groupDoc.exists()) {
+      throw new Error("Group not found");
+    }
+
+    const group = groupDoc.data() as Group;
+
+    if (!group.activeAccusation) {
+      throw new Error("No active accusation");
+    }
+
+    if (voterId === group.activeAccusation.accusedId) {
+      throw new Error("The accused member cannot vote");
+    }
+
+    // Update the vote
+    const updatedVotes = {
+      ...group.activeAccusation.votes,
+      [voterId]: vote,
+    };
+
+    await updateDoc(groupRef, {
+      "activeAccusation.votes": updatedVotes,
+    });
+
+    // Check if all members (except accused) have voted
+    const totalVoters = group.members.length - 1; // Exclude the accused
+    const votesCount = Object.keys(updatedVotes).length;
+
+    if (votesCount === totalVoters) {
+      // Calculate result
+      const yesVotes = Object.values(updatedVotes).filter((v) => v).length;
+      const allVotedYes = yesVotes === totalVoters;
+
+      if (allVotedYes) {
+        // Everyone voted that the person lied - deduct a point
+        await this.updatePoints(groupId, group.activeAccusation.accusedId, -1);
+      }
+
+      // Clear the accusation
+      await updateDoc(groupRef, {
+        activeAccusation: null,
+      });
+    }
   },
 };
