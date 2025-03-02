@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Image, StyleSheet, TouchableOpacity, Text, PanResponder, Animated, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import { useAuth } from '../contexts/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 interface ImageEditorProps {
   imageUri: string;
@@ -10,11 +13,32 @@ interface ImageEditorProps {
   onCancel: () => void;
 }
 
+const logoMap = {
+  'logo1': require('../assets/images/logo-classic.png'),
+  'logo2': require('../assets/images/logo-skull.png'),
+  'logo3': require('../assets/images/logo-elite.png'),
+};
+
 export default function ImageEditor({ imageUri, onSave, onCancel }: ImageEditorProps) {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [activeLogo, setActiveLogo] = useState(null);
   const viewShotRef = useRef<ViewShot>(null);
   const pan = useRef(new Animated.ValueXY()).current;
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const loadUserLogo = async () => {
+      if (user?.id) {
+        const userDoc = await getDoc(doc(db, "users", user.id));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setActiveLogo(userData.activeLogo || 'logo1'); // Default to logo1 if none set
+        }
+      }
+    };
+    loadUserLogo();
+  }, [user?.id]);
 
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -95,8 +119,8 @@ export default function ImageEditor({ imageUri, onSave, onCancel }: ImageEditorP
           {...panResponder.panHandlers}
         >
           <Image
-            source={require('../assets/images/tempsniperlogo.png')}
-            style={styles.sniperScope}
+            source={activeLogo ? logoMap[activeLogo] : require('../assets/images/tempsniperlogo.png')}
+            style={activeLogo ? styles.sniperScope : styles.redTintedScope}
           />
         </Animated.View>
       </ViewShot>
@@ -137,7 +161,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'contain',
-    tintColor: '#ff0000',
+  },
+  redTintedScope: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    tintColor: 'red',
   },
   buttonContainer: {
     flexDirection: 'row',

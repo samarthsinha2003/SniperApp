@@ -93,14 +93,21 @@ export const store = {
         }
 
         newPoints = currentPoints - item.price;
-        transaction.update(userRef, {
+        const updateData: any = {
           points: newPoints,
           inventory: arrayUnion({
             id: item.id,
             purchasedAt: Date.now(),
             used: false,
-          }),
-        });
+          })
+        };
+
+        // If it's a logo item, set it as the active logo
+        if (item.type === "logo") {
+          updateData.activeLogo = item.id;
+        }
+
+        transaction.update(userRef, updateData);
       });
 
       // After successful transaction, update points in all groups
