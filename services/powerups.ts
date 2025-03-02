@@ -131,16 +131,21 @@ export const powerupsService = {
 
     let points = basePoints;
 
-    // Check for double points on the sniper
-    if (sniperPowerups.some((p) => p.type === "double_points")) {
-      points *= 2;
-      await this.consumePowerup(sniperId, "double_points");
-    }
+    // Only apply powerup effects if target doesn't have shield
+    const hasShield = targetPowerups.some((p) => p.type === "shield" && p.remainingUses > 0);
+    
+    if (!hasShield) {
+      // Apply double points from sniper if they have it
+      if (sniperPowerups.some((p) => p.type === "double_points")) {
+        points *= 2;
+        await this.consumePowerup(sniperId, "double_points");
+      }
 
-    // Check for half points on the target
-    if (targetPowerups.some((p) => p.type === "half_points")) {
-      points *= 0.5;
-      await this.consumePowerup(targetId, "half_points");
+      // Apply half points from target if they have it
+      if (targetPowerups.some((p) => p.type === "half_points")) {
+        points *= 0.5;
+        await this.consumePowerup(targetId, "half_points");
+      }
     }
 
     return points;
