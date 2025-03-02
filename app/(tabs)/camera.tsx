@@ -9,6 +9,7 @@ import {
   Dimensions,
   Alert,
   AppState,
+  Platform,
 } from "react-native";
 import * as MediaLibrary from "expo-media-library";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,6 +42,13 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
+  const isWeb = Platform.OS === "web";
+
+  // On web, we'll consider media permissions granted since they're handled differently
+  const webMediaPermission = { granted: true, status: "granted" };
+  const effectiveMediaPermission = isWeb
+    ? webMediaPermission
+    : mediaPermission || { granted: false, status: "undetermined" };
   const cameraRef = useRef<CameraView>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
@@ -179,7 +187,7 @@ export default function CameraScreen() {
     );
   }
 
-  if (!mediaPermission.granted) {
+  if (!effectiveMediaPermission.granted) {
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -201,7 +209,13 @@ export default function CameraScreen() {
             </Text>
             <TouchableOpacity
               style={styles.permissionButton}
-              onPress={requestMediaPermission}
+              onPress={() => {
+                if (isWeb) {
+                  // On web, just proceed since permissions are handled by the browser
+                  return;
+                }
+                requestMediaPermission();
+              }}
             >
               <LinearGradient
                 colors={["#6366f1", "#4f46e5"]}
@@ -243,10 +257,14 @@ export default function CameraScreen() {
       const endTime = new Date(Date.now() + 20000); // 20 seconds from now
       setCountdownEndTime(endTime);
 
-      Alert.alert(
-        "Success",
-        `You sniped ${target.name}! They have 20 seconds to dodge.`
-      );
+      if (Platform.OS === "web") {
+        alert(`You sniped ${target.name}! They have 20 seconds to dodge.`);
+      } else {
+        Alert.alert(
+          "Success",
+          `You sniped ${target.name}! They have 20 seconds to dodge.`
+        );
+      }
 
       // Wait for 20 seconds or until dodged
       // Listen for changes to the snipe status
@@ -256,7 +274,11 @@ export default function CameraScreen() {
           if (snipeData.status === "dodged") {
             // Clear countdown and show dodge message
             setCountdownEndTime(null);
-            Alert.alert("Dodged!", `${target.name} dodged your snipe!`);
+            if (Platform.OS === "web") {
+              alert(`${target.name} dodged your snipe!`);
+            } else {
+              Alert.alert("Dodged!", `${target.name} dodged your snipe!`);
+            }
             loadTargets(); // Refresh targets
             unsubscribe(); // Stop listening for changes
           }
@@ -277,7 +299,11 @@ export default function CameraScreen() {
             // Get final points value from snipe
             const points = snipeData.points || 1; // Default to 10 if not set
             await groupsService.updatePoints(target.groupId, user.id, points);
-            Alert.alert("Success", `You earned ${points} points!`);
+            if (Platform.OS === "web") {
+              alert(`You earned ${points} points!`);
+            } else {
+              Alert.alert("Success", `You earned ${points} points!`);
+            }
 
             loadTargets(); // Refresh targets to update points
             setCountdownEndTime(null);
@@ -287,7 +313,11 @@ export default function CameraScreen() {
       }, 20000);
     } catch (error) {
       console.error("Error creating snipe:", error);
-      Alert.alert("Error", "Failed to snipe target");
+      if (Platform.OS === "web") {
+        alert("Failed to snipe target");
+      } else {
+        Alert.alert("Error", "Failed to snipe target");
+      }
     }
   };
 
@@ -307,11 +337,19 @@ export default function CameraScreen() {
         setShowEditor(true);
       } else {
         console.error("Failed to take picture, photo is undefined.");
-        Alert.alert("Error", "Failed to take picture");
+        if (Platform.OS === "web") {
+          alert("Failed to take picture");
+        } else {
+          Alert.alert("Error", "Failed to take picture");
+        }
       }
     } catch (error) {
       console.error("Error taking picture:", error);
-      Alert.alert("Error", "Failed to take or save picture");
+      if (Platform.OS === "web") {
+        alert("Failed to take or save picture");
+      } else {
+        Alert.alert("Error", "Failed to take or save picture");
+      }
     }
   }
 

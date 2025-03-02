@@ -40,6 +40,8 @@ export interface Group {
     accuserId: string;
     votes: { [userId: string]: boolean };
     timestamp: number;
+    countdownStartTime?: number; // When everyone has voted, start 1-hour countdown
+    allVoted?: boolean; // Flag to track if everyone has voted
   };
 }
 
@@ -268,16 +270,90 @@ export const groupsService = {
     // Check if all members (except accused) have voted
     const totalVoters = group.members.length - 1; // Exclude the accused
     const votesCount = Object.keys(updatedVotes).length;
+    const yesVotes = Object.values(updatedVotes).filter((v) => v).length;
+    const allVotedYes = yesVotes === totalVoters;
 
     if (votesCount === totalVoters) {
-      // Calculate result
-      const yesVotes = Object.values(updatedVotes).filter((v) => v).length;
-      const allVotedYes = yesVotes === totalVoters;
-
       if (allVotedYes) {
-        // Everyone voted that the person lied - deduct a point
-        await this.updatePoints(groupId, group.activeAccusation.accusedId, -1);
+        // Start 1-hour countdown if everyone voted yes
+        await updateDoc(groupRef, {
+          activeAccusation: {
+            ...group.activeAccusation,
+            votes: updatedVotes,
+            allVoted: true,
+            countdownStartTime: Date.now(),
+          },
+        });
+      } else {
+        // If not everyone voted yes, clear the accusation
+        await updateDoc(groupRef, {
+          activeAccusation: null,
+        });
       }
+    } else {
+      // Just update votes if not everyone has voted yet
+      await updateDoc(groupRef, {
+        activeAccusation: {
+          ...group.activeAccusation,
+          votes: updatedVotes,
+        },
+      });
+    }
+  },
+
+  async retractVote(groupId: string, voterId: string): Promise<void> {
+    const groupRef = doc(db, "groups", groupId);
+    const groupDoc = await getDoc(groupRef);
+
+    if (!groupDoc.exists()) {
+      throw new Error("Group not found");
+    }
+
+    const group = groupDoc.data() as Group;
+
+    if (!group.activeAccusation) {
+      throw new Error("No active accusation");
+    }
+
+    if (!group.activeAccusation.countdownStartTime) {
+      throw new Error("Cannot retract vote before countdown starts");
+    }
+
+    if (Date.now() > group.activeAccusation.countdownStartTime + 3600000) {
+      // 1 hour in ms
+      throw new Error("Cannot retract vote after countdown expires");
+    }
+
+    const votes = { ...group.activeAccusation.votes };
+    delete votes[voterId];
+
+    // If any vote is retracted during countdown, clear the accusation
+    await updateDoc(groupRef, {
+      activeAccusation: null,
+    });
+  },
+
+  async checkAccusationCountdown(groupId: string): Promise<void> {
+    const groupRef = doc(db, "groups", groupId);
+    const groupDoc = await getDoc(groupRef);
+
+    if (!groupDoc.exists()) {
+      throw new Error("Group not found");
+    }
+
+    const group = groupDoc.data() as Group;
+
+    if (
+      !group.activeAccusation?.countdownStartTime ||
+      !group.activeAccusation?.allVoted
+    ) {
+      return;
+    }
+
+    // Check if countdown has expired (1 hour)
+    if (Date.now() > group.activeAccusation.countdownStartTime + 3600000) {
+      // Deduct point from accused member
+      await this.updatePoints(groupId, group.activeAccusation.accusedId, -1);
 
       // Clear the accusation
       await updateDoc(groupRef, {

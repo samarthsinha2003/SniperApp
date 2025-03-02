@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
 
@@ -42,7 +43,12 @@ export function TargetSelectionModal({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <ThemedView style={styles.modalContent}>
+        <LinearGradient
+          colors={["#4a00e0", "#8e2de2"]}
+          style={styles.modalContent}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           <ThemedText style={styles.title}>Who did you snipe?</ThemedText>
 
           <ScrollView style={styles.targetList}>
@@ -61,9 +67,16 @@ export function TargetSelectionModal({
           </ScrollView>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <ThemedText style={styles.closeButtonText}>Cancel</ThemedText>
+            <LinearGradient
+              colors={["#6366f1", "#4f46e5"]}
+              style={styles.closeButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <ThemedText style={styles.closeButtonText}>Cancel</ThemedText>
+            </LinearGradient>
           </TouchableOpacity>
-        </ThemedView>
+        </LinearGradient>
       </View>
     </Modal>
   );
@@ -83,12 +96,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
+    color: "white",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   targetList: {
     marginBottom: 20,
@@ -100,25 +121,40 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.05)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   targetName: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#333",
   },
   points: {
     fontSize: 14,
-    opacity: 0.7,
+    color: "#666",
   },
   closeButton: {
-    backgroundColor: "#ff4040",
-    padding: 15,
-    borderRadius: 10,
+    width: "100%",
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  closeButtonGradient: {
+    paddingVertical: 15,
     alignItems: "center",
   },
   closeButtonText: {
     color: "white",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });
