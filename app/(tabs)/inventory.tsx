@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from "react-native";
 import { ThemedText } from "../../components/ThemedText";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -16,7 +17,7 @@ import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 
 export default function InventoryScreen() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [inventory, setInventory] = useState<UserInventory | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -219,6 +220,9 @@ export default function InventoryScreen() {
         <ThemedText style={[styles.title, { color: "#fff" }]}>
           Inventory
         </ThemedText>
+        <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+          <MaterialIcons name="logout" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView}>
@@ -279,8 +283,37 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === "ios" ? 60 : 50,
     paddingBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  logoutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoutButtonGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  logoutButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   title: {
     fontSize: 36,
