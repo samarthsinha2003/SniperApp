@@ -32,7 +32,7 @@ export default function DodgeAlert({
     const snipeTime = snipe.timestamp.toDate();
     const initialTimeLeft = Math.max(
       0,
-      60 - Math.floor((now.getTime() - snipeTime.getTime()) / 1000)
+      20 - Math.floor((now.getTime() - snipeTime.getTime()) / 1000)
     );
     setTimeLeft(initialTimeLeft);
 
