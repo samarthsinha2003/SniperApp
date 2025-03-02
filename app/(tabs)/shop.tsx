@@ -389,6 +389,9 @@ export default function ShopScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -401,9 +404,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: "600", // Bolder points
   },
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -415,10 +415,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36, // Even larger title
     fontWeight: "bold",
-    textShadowColor: "rgba(0, 0, 0, 0.3)", // Title shadow
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    color: "#fff",
   },
   logoutButton: {
     width: 40,
@@ -426,85 +426,89 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)", // Lighter logout button background
+    backgroundColor: "rgba(255,255,255,0.2)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 26, // Larger section titles
+    fontSize: 24,
     fontWeight: "bold",
-    marginTop: 25,
-    marginBottom: 15,
-    textTransform: "uppercase",
-    letterSpacing: 1.5, // More letter spacing
-    textShadowColor: "rgba(0, 0, 0, 0.3)", // Section title shadow
+    marginVertical: 20,
+    paddingHorizontal: 20,
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
-    color: "#fff",
   },
   itemsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    paddingHorizontal: 20,
   },
   itemCard: {
     width: "48%",
-    borderRadius: 15, // More rounded item cards
+    borderRadius: 15,
     padding: 15,
     marginBottom: 15,
-    backgroundColor: "rgba(255,255,255,0.9)", // Brighter item card background
+    backgroundColor: "rgba(255,255,255,0.1)",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3, // Deeper shadow
-    },
-    shadowOpacity: 0.3, // Stronger shadow
-    shadowRadius: 4,
-    elevation: 5,
-    borderWidth: 0, // Removed border for cleaner look
-  },
-  itemIcon: {
-    width: 60, // Larger icon area
-    height: 60,
-    borderRadius: 30, // More rounded icon background
-    backgroundColor: "#ffcc80", // Light orange icon background
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  itemName: {
-    fontSize: 20, // Larger item name
-    fontWeight: "700", // Bolder item name
-    marginBottom: 6,
-    color: "#333",
-  },
-  itemDescription: {
-    fontSize: 16, // Larger description
-    marginBottom: 12,
-    color: "#555",
-  },
-  priceTag: {
-    backgroundColor: "#ff6f00", // Vibrant price tag background
-    borderRadius: 12, // Rounded price tag
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    alignSelf: "flex-start",
-    shadowColor: "#000", // Price tag shadow
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  itemIcon: {
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  itemName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  itemDescription: {
+    fontSize: 14,
+    color: "#fff",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  priceTag: {
+    marginTop: 10,
+    backgroundColor: "#ff6f00",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   priceText: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 16, // Larger price text
-    textShadowColor: "rgba(0, 0, 0, 0.3)", // Price text shadow
+    fontSize: 16,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
