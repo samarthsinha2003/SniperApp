@@ -44,12 +44,37 @@ export default function AuthScreen() {
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      Alert.alert(
-        "Error",
-        error.message || "An error occurred during authentication"
-      );
+      let errorMessage = "An error occurred during authentication";
+
+      // Firebase error codes
+      switch (error.code) {
+        case "auth/invalid-email":
+          errorMessage = "Invalid email address format";
+          break;
+        case "auth/user-disabled":
+          errorMessage = "This account has been disabled";
+          break;
+        case "auth/user-not-found":
+          errorMessage = "No account found with this email";
+          break;
+        case "auth/invalid-credential":
+          errorMessage = "Invalid credentials";
+          break;
+        case "auth/wrong-password":
+          errorMessage = "Incorrect password";
+          break;
+        case "auth/email-already-in-use":
+          errorMessage = "An account already exists with this email";
+          break;
+        case "auth/weak-password":
+          errorMessage = "Password should be at least 6 characters";
+          break;
+      }
+
+      Alert.alert("Authentication Failed", errorMessage);
     } finally {
       setLoading(false);
+      return;
     }
   };
 
