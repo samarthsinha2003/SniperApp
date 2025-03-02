@@ -11,7 +11,7 @@ export default function CountdownTimer({
   endTime,
   onComplete,
 }: CountdownTimerProps) {
-  const [timeLeft, setTimeLeft] = useState("5");
+  const [timeLeft, setTimeLeft] = useState("20");
   const [progress, setProgress] = useState(1); // 1 = full, 0 = empty
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function CountdownTimer({
       }
 
       setTimeLeft(remaining.toString());
-      setProgress(remaining / 5); // 60 seconds total
+      setProgress(remaining / 20); // 20 seconds total
     }, 1000);
 
     return () => clearInterval(timer);

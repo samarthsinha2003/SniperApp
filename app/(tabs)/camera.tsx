@@ -65,7 +65,15 @@ export default function CameraScreen() {
         snapshot.docChanges().forEach((change) => {
           if (change.type === "added") {
             const snipeData = change.doc.data() as Snipe;
-            setActiveSnipe(snipeData);
+            const now = new Date();
+            const snipeTime = snipeData.timestamp.toDate();
+            const timeDiff = now.getTime() - snipeTime.getTime();
+
+            // Only show dodge alert if within the dodge window
+            if (timeDiff <= 20000) {
+              // 20 seconds window
+              setActiveSnipe(snipeData);
+            }
           }
         });
       });
@@ -78,10 +86,18 @@ export default function CameraScreen() {
             appState.current.match(/inactive|background/) &&
             nextAppState === "active"
           ) {
-            // App has come to foreground - check for active snipes
+            // App has come to foreground - check for active snipes within dodge window
             snipesService.getActiveSnipesForTarget(user.id).then((snipes) => {
               if (snipes.length > 0) {
-                setActiveSnipe(snipes[0]);
+                const now = new Date();
+                const snipeTime = snipes[0].timestamp.toDate();
+                const timeDiff = now.getTime() - snipeTime.getTime();
+
+                // Only show dodge alert if within the dodge window
+                if (timeDiff <= 20000) {
+                  // 20 seconds window
+                  setActiveSnipe(snipes[0]);
+                }
               }
             });
           }
@@ -224,15 +240,30 @@ export default function CameraScreen() {
       setLastPhotoUri(null);
 
       // Set countdown end time
-      const endTime = new Date(Date.now() + 5000); // 5 seconds from now
+      const endTime = new Date(Date.now() + 20000); // 20 seconds from now
       setCountdownEndTime(endTime);
 
       Alert.alert(
         "Success",
-        `You sniped ${target.name}! They have 5 seconds to dodge.`
+        `You sniped ${target.name}! They have 20 seconds to dodge.`
       );
 
-      // Wait for 5 seconds or until dodged
+      // Wait for 20 seconds or until dodged
+      // Listen for changes to the snipe status
+      const unsubscribe = onSnapshot(doc(db, "snipes", snipeId), (doc) => {
+        if (doc.exists()) {
+          const snipeData = doc.data() as Snipe;
+          if (snipeData.status === "dodged") {
+            // Clear countdown and show dodge message
+            setCountdownEndTime(null);
+            Alert.alert("Dodged!", `${target.name} dodged your snipe!`);
+            loadTargets(); // Refresh targets
+            unsubscribe(); // Stop listening for changes
+          }
+        }
+      });
+
+      // Set timeout for when dodge window expires
       const timeoutId = setTimeout(async () => {
         const snipeDoc = await getDoc(doc(db, "snipes", snipeId));
         if (snipeDoc.exists()) {
@@ -252,7 +283,8 @@ export default function CameraScreen() {
             setCountdownEndTime(null);
           }
         }
-      }, 5000);
+        unsubscribe(); // Stop listening for changes when timeout completes
+      }, 20000);
     } catch (error) {
       console.error("Error creating snipe:", error);
       Alert.alert("Error", "Failed to snipe target");

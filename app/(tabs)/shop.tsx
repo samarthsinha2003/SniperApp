@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { ThemedText } from "../../components/ThemedText";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === "ios" ? 60 : 50,
     paddingBottom: 20,
   },
   title: {
