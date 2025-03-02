@@ -194,7 +194,7 @@ export default function ShopScreen() {
               if (error instanceof Error && error.message === "Item already owned") {
                 Alert.alert("Already Owned", "You already own this item!");
               } else {
-                Alert.alert("Error", "Failed to complete purchase");
+                Alert.alert("Error", "Item already Purchased");
                 console.error(error);
               }
             } finally {

@@ -77,23 +77,33 @@ export const powerupsService = {
 
     if (!userDoc.exists()) return;
 
-    const currentPowerups: ActivePowerup[] =
-      userDoc.data()?.activePowerups || [];
+    const currentPowerups: ActivePowerup[] = userDoc.data()?.activePowerups || [];
     const powerupIndex = currentPowerups.findIndex((p) => p.type === type);
 
     if (powerupIndex === -1) return;
 
+    const powerupToConsume = currentPowerups[powerupIndex];
     const updatedPowerup = {
-      ...currentPowerups[powerupIndex],
-      remainingUses: currentPowerups[powerupIndex].remainingUses - 1,
+      ...powerupToConsume,
+      remainingUses: powerupToConsume.remainingUses - 1,
     };
 
     // Remove powerup if no uses remaining, otherwise update its uses
-    const newPowerups = currentPowerups.filter(
-      (_, index) => index !== powerupIndex
-    );
+    const newPowerups = currentPowerups.filter((_, index) => index !== powerupIndex);
     if (updatedPowerup.remainingUses > 0) {
       newPowerups.push(updatedPowerup);
+    } else {
+      // When powerup is fully consumed, remove it from inventory
+      const inventory = userDoc.data()?.inventory || [];
+      const updatedInventory = inventory.filter(
+        (item: any) => !(item.id === powerupToConsume.id && item.used === true)
+      );
+
+      await updateDoc(userRef, {
+        activePowerups: newPowerups,
+        inventory: updatedInventory
+      });
+      return;
     }
 
     await updateDoc(userRef, {
