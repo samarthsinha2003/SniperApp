@@ -57,17 +57,8 @@ export const snipesService = {
       (p) => p.type === "half_points" && p.remainingUses > 0
     );
 
-    // Calculate base points (1 for successful snipe)
-    let points = 1;
-    if (hasDoublePoints) {
-      points *= 2;
-      await powerupsService.consumePowerup(sniperId, "double_points");
-    }
-    if (hasHalfPoints) {
-      points *= 0.5;
-      // Consume one use of half_points from target when they get sniped
-      await powerupsService.consumePowerup(targetId, "half_points");
-    }
+    // Calculate points using powerupsService with both sniper and target IDs
+    const points = await powerupsService.calculatePoints(sniperId, targetId, 1);
 
     const newSnipe: Snipe = {
       id: snipeDoc.id,

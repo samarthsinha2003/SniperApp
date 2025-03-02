@@ -159,7 +159,21 @@ export const store = {
       if (storeItem.type === "logo") {
         // For logos, don't mark as used, just update the active logo
         await updateDoc(userRef, {
-          activeLogo: itemId
+          activeLogo: itemId,
+        });
+      } else if (storeItem.type === "powerup" && storeItem.effect) {
+        // For powerups, activate the powerup first
+        await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
+
+        // Then mark as used in inventory
+        const updatedInventory = [...inventory];
+        updatedInventory[itemIndex] = {
+          ...updatedInventory[itemIndex],
+          used: true,
+        };
+
+        await updateDoc(userRef, {
+          inventory: updatedInventory,
         });
       } else if (storeItem.type === "powerup" && storeItem.effect) {
         // For powerups, try to activate it

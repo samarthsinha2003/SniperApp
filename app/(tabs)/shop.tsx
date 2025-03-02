@@ -47,12 +47,12 @@ export const shopItems: StoreItem[] = [
   {
     id: "powerup1",
     name: "Double Points",
-    description: "Next 2 snipes worth double points",
+    description: "Next 8 snipes worth double points",
     price: 8,
     icon: "star",
     type: "powerup",
     effect: "double_points",
-    duration: 2,
+    duration: 8,
   },
   {
     id: "powerup2",
