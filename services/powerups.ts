@@ -1,5 +1,7 @@
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { shopItems } from "../app/(tabs)/shop";
+import { StoreItem } from "./store";
 
 export interface ActivePowerup {
   id: string;
@@ -28,11 +30,17 @@ export const powerupsService = {
     const currentPowerups: ActivePowerup[] =
       userDoc.data()?.activePowerups || [];
 
+    // Get duration from shop item
+    const shopItem = shopItems.find((item) => item.id === powerupId);
+    if (!shopItem) throw new Error("Powerup not found in shop");
+
+    const duration = shopItem.duration || 1;
+
     // Add new powerup
     const newPowerup: ActivePowerup = {
       id: powerupId,
       type,
-      remainingUses: type === "double_points" ? 2 : 1, // double points lasts 2 snipes, others 1
+      remainingUses: duration,
       activatedAt: Date.now(),
     };
 
@@ -82,19 +90,28 @@ export const powerupsService = {
     return powerups.some((p) => p.type === type);
   },
 
-  async calculatePoints(userId: string, basePoints: number): Promise<number> {
-    const powerups = await this.getActivePowerups(userId);
-    const hasDoublePoints = powerups.some((p) => p.type === "double_points");
-    const hasHalfPoints = powerups.some((p) => p.type === "half_points");
+  async calculatePoints(
+    sniperId: string,
+    targetId: string,
+    basePoints: number
+  ): Promise<number> {
+    const [sniperPowerups, targetPowerups] = await Promise.all([
+      this.getActivePowerups(sniperId),
+      this.getActivePowerups(targetId),
+    ]);
 
     let points = basePoints;
-    if (hasDoublePoints) {
+
+    // Check for double points on the sniper
+    if (sniperPowerups.some((p) => p.type === "double_points")) {
       points *= 2;
-      await this.consumePowerup(userId, "double_points");
+      await this.consumePowerup(sniperId, "double_points");
     }
-    if (hasHalfPoints) {
+
+    // Check for half points on the target
+    if (targetPowerups.some((p) => p.type === "half_points")) {
       points *= 0.5;
-      await this.consumePowerup(userId, "half_points");
+      await this.consumePowerup(targetId, "half_points");
     }
 
     return points;
