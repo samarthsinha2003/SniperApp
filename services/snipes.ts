@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../config/firebase";
 import { powerupsService } from "./powerups";
+import { Group } from "./groups";
 
 export interface Snipe {
   id: string;
@@ -96,6 +97,16 @@ export const snipesService = {
       throw new Error("Target user not found");
     }
 
+    const sniperRef = doc(db, "users", snipe.sniperId);
+    const sniperDoc = await getDoc(sniperRef);
+
+    if (!sniperDoc.exists()) {
+      throw new Error("Sniper user not found");
+    }
+
+    const sniperData = sniperDoc.data();
+    let points = 0;
+
     // Check if target has an active shield
     const hasShield = await powerupsService.checkActivePowerup(snipe.targetId, "shield");
     
@@ -108,11 +119,37 @@ export const snipesService = {
       });
     } else {
       // No shield, process snipe normally with other powerups
-      const points = await powerupsService.calculatePoints(snipe.sniperId, snipe.targetId, 1);
+      points = await powerupsService.calculatePoints(snipe.sniperId, snipe.targetId, 1);
       await updateDoc(snipeRef, {
         status: "completed",
         points
       });
+    }
+
+    // Update sniper's points in their profile
+    const newSniperPoints = (sniperData.points || 0) + points;
+    await updateDoc(sniperRef, { points: newSniperPoints });
+
+    // Update sniper's points in all their groups
+    const groups = sniperData.groups || [];
+    for (const groupId of groups) {
+      const groupRef = doc(db, "groups", groupId);
+      const groupDoc = await getDoc(groupRef);
+
+      if (!groupDoc.exists()) continue;
+
+      const group = groupDoc.data() as Group;
+      const memberIndex = group.members.findIndex((m: any) => m.id === snipe.sniperId);
+
+      if (memberIndex !== -1) {
+        const updatedMembers = [...group.members];
+        updatedMembers[memberIndex] = {
+          ...updatedMembers[memberIndex],
+          points: newSniperPoints,
+        };
+
+        await updateDoc(groupRef, { members: updatedMembers });
+      }
     }
   },
 
