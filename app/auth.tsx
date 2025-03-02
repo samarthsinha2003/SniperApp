@@ -234,20 +234,20 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     marginTop: 20,
-    padding: 10,
+    alignItems: "center",
   },
   resetButtonText: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "#4f46e5",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   switchButton: {
     marginTop: 20,
-    padding: 10,
+    alignItems: "center",
   },
   switchButtonText: {
-    textAlign: "center",
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "#4f46e5",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
