@@ -110,6 +110,28 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="inventory"
+        options={{
+          title: "Inventory",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={[
+                styles.iconContainer,
+                focused && styles.activeIconContainer,
+              ]}
+            >
+              <MaterialIcons
+                name="inventory"
+                size={24}
+                color={color}
+                style={focused ? styles.activeIcon : null}
+              />
+            </View>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="groups"
         options={{
           title: "Groups",

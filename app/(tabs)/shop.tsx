@@ -17,7 +17,7 @@ import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import ConfettiCannon from "react-native-confetti-cannon";
 
-const shopItems: StoreItem[] = [
+export const shopItems: StoreItem[] = [
   // Crosshairs
   {
     id: "crosshair1",
