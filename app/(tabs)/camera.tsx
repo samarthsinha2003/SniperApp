@@ -291,26 +291,30 @@ export default function CameraScreen() {
         if (snipeDoc.exists()) {
           const snipeData = snipeDoc.data() as Snipe;
           if (snipeData.status === "pending") {
-            // If not dodged, award points to sniper based on powerups
-            await updateDoc(doc(db, "snipes", snipeId), {
-              status: "completed",
-            });
-
-            // Get final points value from snipe
-            const points = snipeData.points || 1; // Default to 10 if not set
-            await groupsService.updatePoints(target.groupId, user.id, points);
-            if (Platform.OS === "web") {
-              alert(`You earned ${points} points!`);
-            } else {
-              Alert.alert("Success", `You earned ${points} points!`);
+            try {
+              // Handle snipe hit with powerup logic
+              await snipesService.handleSnipeHit(snipeId);
+              
+              if (Platform.OS === "web") {
+                alert(`Snipe landed on ${target.name}!`);
+              } else {
+                Alert.alert("Hit!", `Snipe landed on ${target.name}!`);
+              }
+              
+              loadTargets(); // Refresh targets list
+            } catch (error) {
+              console.error("Error processing snipe hit:", error);
+              Alert.alert("Error", "Failed to process snipe");
             }
-
-            loadTargets(); // Refresh targets to update points
-            setCountdownEndTime(null);
           }
         }
-        unsubscribe(); // Stop listening for changes when timeout completes
+        unsubscribe(); // Stop listening for changes
       }, 20000);
+
+      return () => {
+        clearTimeout(timeoutId);
+        unsubscribe();
+      };
     } catch (error) {
       console.error("Error creating snipe:", error);
       if (Platform.OS === "web") {

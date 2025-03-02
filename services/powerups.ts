@@ -77,23 +77,33 @@ export const powerupsService = {
 
     if (!userDoc.exists()) return;
 
-    const currentPowerups: ActivePowerup[] =
-      userDoc.data()?.activePowerups || [];
+    const currentPowerups: ActivePowerup[] = userDoc.data()?.activePowerups || [];
     const powerupIndex = currentPowerups.findIndex((p) => p.type === type);
 
     if (powerupIndex === -1) return;
 
+    const powerupToConsume = currentPowerups[powerupIndex];
     const updatedPowerup = {
-      ...currentPowerups[powerupIndex],
-      remainingUses: currentPowerups[powerupIndex].remainingUses - 1,
+      ...powerupToConsume,
+      remainingUses: powerupToConsume.remainingUses - 1,
     };
 
     // Remove powerup if no uses remaining, otherwise update its uses
-    const newPowerups = currentPowerups.filter(
-      (_, index) => index !== powerupIndex
-    );
+    const newPowerups = currentPowerups.filter((_, index) => index !== powerupIndex);
     if (updatedPowerup.remainingUses > 0) {
       newPowerups.push(updatedPowerup);
+    } else {
+      // When powerup is fully consumed, remove it from inventory
+      const inventory = userDoc.data()?.inventory || [];
+      const updatedInventory = inventory.filter(
+        (item: any) => !(item.id === powerupToConsume.id && item.used === true)
+      );
+
+      await updateDoc(userRef, {
+        activePowerups: newPowerups,
+        inventory: updatedInventory
+      });
+      return;
     }
 
     await updateDoc(userRef, {
@@ -121,16 +131,21 @@ export const powerupsService = {
 
     let points = basePoints;
 
-    // Check for double points on the sniper
-    if (sniperPowerups.some((p) => p.type === "double_points")) {
-      points *= 2;
-      await this.consumePowerup(sniperId, "double_points");
-    }
+    // Only apply powerup effects if target doesn't have shield
+    const hasShield = targetPowerups.some((p) => p.type === "shield" && p.remainingUses > 0);
+    
+    if (!hasShield) {
+      // Apply double points from sniper if they have it
+      if (sniperPowerups.some((p) => p.type === "double_points")) {
+        points *= 2;
+        await this.consumePowerup(sniperId, "double_points");
+      }
 
-    // Check for half points on the target
-    if (targetPowerups.some((p) => p.type === "half_points")) {
-      points *= 0.5;
-      await this.consumePowerup(targetId, "half_points");
+      // Apply half points from target if they have it
+      if (targetPowerups.some((p) => p.type === "half_points")) {
+        points *= 0.5;
+        await this.consumePowerup(targetId, "half_points");
+      }
     }
 
     return points;

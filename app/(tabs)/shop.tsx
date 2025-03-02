@@ -114,35 +114,41 @@ const showSuccessAlert = (message: string): Promise<void> => {
 };
 
 export default function ShopScreen() {
-  const { user, signOut } = useAuth();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const [loading, setLoading] = useState(false);
-  const [userPoints, setUserPoints] = useState(0);
   const confettiRef = useRef<ConfettiCannon>(null);
+  const { user, signOut } = useAuth();
+  const [userPoints, setUserPoints] = useState(0);
+  const [loading, setLoading] = useState(false);  // Initialize as false
+  const [ownedItems, setOwnedItems] = useState<string[]>([]);
 
   useEffect(() => {
-    if (user?.id) {
-      // Initial points load
-      store.getUserInventory(user.id).then((inventory) => {
-        setUserPoints(inventory.points);
-      });
+    if (!user?.id) return;
 
-      // Set up real-time listener for user document
-      const unsubscribe = onSnapshot(doc(db, "users", user.id), (doc) => {
-        if (doc.exists()) {
-          setUserPoints(doc.data()?.points || 0);
-        }
-      });
+    const userRef = doc(db, "users", user.id);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        setUserPoints(doc.data()?.points || 0);
+        // Only track owned logos, not powerups
+        const inventory = doc.data()?.inventory || [];
+        setOwnedItems(inventory
+          .filter((item: any) => item.type === 'logo')
+          .map((item: any) => item.id)
+        );
+      }
+    });
 
-      // Clean up listener on unmount
-      return () => unsubscribe();
-    }
+    return () => unsubscribe();
   }, [user?.id]);
 
   const handlePurchase = async (item: StoreItem) => {
     if (!user?.id) {
       Alert.alert("Error", "You must be logged in to make purchases");
+      return;
+    }
+
+    // Only check ownership for logo items
+    if (item.type === 'logo' && ownedItems.includes(item.id)) {
+      Alert.alert("Already Owned", "You already own this item!");
       return;
     }
 
@@ -161,11 +167,8 @@ export default function ShopScreen() {
             try {
               const success = await store.purchaseItem(user.id, item);
               if (success) {
-                // Update points after successful purchase
                 const inventory = await store.getUserInventory(user.id);
                 setUserPoints(inventory.points);
-
-                // Show success alert first
                 await new Promise<void>((resolve) => {
                   Alert.alert(
                     "Success!",
@@ -174,7 +177,6 @@ export default function ShopScreen() {
                       {
                         text: "OK",
                         onPress: () => {
-                          // Start confetti animation after user clicks OK
                           confettiRef.current?.start();
                           resolve();
                         },
@@ -189,8 +191,12 @@ export default function ShopScreen() {
                 Alert.alert("Error", "Purchase failed. Insufficient points.");
               }
             } catch (error) {
-              Alert.alert("Error", "Failed to complete purchase");
-              console.error(error);
+              if (error instanceof Error && error.message === "Item already owned") {
+                Alert.alert("Already Owned", "You already own this item!");
+              } else {
+                Alert.alert("Error", "Item already Purchased");
+                console.error(error);
+              }
             } finally {
               setLoading(false);
             }
@@ -200,10 +206,49 @@ export default function ShopScreen() {
     );
   };
 
+  const renderItem = (item: StoreItem) => {
+    const isOwned = item.type === 'logo' && ownedItems.includes(item.id);
+    const canBuy = userPoints >= item.price && !isOwned;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        style={[
+          styles.itemCard,
+          {
+            backgroundColor: "rgba(255,255,255,0.9)",
+            opacity: canBuy ? 1 : 0.5,
+          },
+        ]}
+        onPress={() => handlePurchase(item)}
+        disabled={!canBuy}
+      >
+        <View style={styles.itemIcon}>
+          <MaterialIcons
+            name={item.icon as any}
+            size={36}
+            color="#ff6f00"
+          />
+        </View>
+        <ThemedText style={[styles.itemName, { color: "#333" }]}>
+          {item.name}
+        </ThemedText>
+        <ThemedText style={[styles.itemDescription, { color: "#555" }]}>
+          {item.description}
+        </ThemedText>
+        <View style={styles.priceTag}>
+          <ThemedText style={styles.priceText}>
+            {isOwned ? "Owned" : `${item.price} Points`}
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#4a00e0", "#8e2de2"]} // Auth screen gradient
+        colors={["#4a00e0", "#8e2de2"]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -211,18 +256,15 @@ export default function ShopScreen() {
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#ff6f00" />
-          {/* Vibrant loading color */}
         </View>
       )}
-
+      
       <View style={styles.header}>
         <View>
           <ThemedText style={[styles.title, { color: "#fff" }]}>
             Shop
           </ThemedText>
-          <ThemedText
-            style={[styles.points, { color: "rgba(255,255,255,0.8)" }]}
-          >
+          <ThemedText style={[styles.points, { color: "rgba(255,255,255,0.8)" }]}>
             {userPoints} Points
           </ThemedText>
         </View>
@@ -238,46 +280,7 @@ export default function ShopScreen() {
         <View style={styles.itemsGrid}>
           {shopItems
             .filter((item) => item.type === "powerup")
-            .map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.itemCard,
-                  {
-                    backgroundColor: "rgba(255,255,255,0.9)", // Brighter item card background
-                    opacity: userPoints >= item.price ? 1 : 0.5,
-                  },
-                ]}
-                onPress={() => handlePurchase(item)}
-                disabled={userPoints < item.price}
-              >
-                <View style={styles.itemIcon}>
-                  <MaterialIcons
-                    name={item.icon as any}
-                    size={36} // Slightly larger icons
-                    color="#ff6f00" // Vibrant icon color
-                  />
-                </View>
-                <ThemedText
-                  style={[styles.itemName, { color: "#333" }]} // Darker item name
-                >
-                  {item.name}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.itemDescription,
-                    { color: "#555" }, // Darker description
-                  ]}
-                >
-                  {item.description}
-                </ThemedText>
-                <View style={styles.priceTag}>
-                  <ThemedText style={styles.priceText}>
-                    {item.price} Points
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
+            .map(renderItem)}
         </View>
 
         <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
@@ -286,56 +289,17 @@ export default function ShopScreen() {
         <View style={styles.itemsGrid}>
           {shopItems
             .filter((item) => item.type === "logo")
-            .map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  styles.itemCard,
-                  {
-                    backgroundColor: "rgba(255,255,255,0.9)", // Brighter item card background
-                    opacity: userPoints >= item.price ? 1 : 0.5,
-                  },
-                ]}
-                onPress={() => handlePurchase(item)}
-                disabled={userPoints < item.price}
-              >
-                <View style={styles.itemIcon}>
-                  <MaterialIcons
-                    name={item.icon as any}
-                    size={36} // Slightly larger icons
-                    color="#ff6f00" // Vibrant icon color
-                  />
-                </View>
-                <ThemedText
-                  style={[styles.itemName, { color: "#333" }]} // Darker item name
-                >
-                  {item.name}
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.itemDescription,
-                    { color: "#555" }, // Darker description
-                  ]}
-                >
-                  {item.description}
-                </ThemedText>
-                <View style={styles.priceTag}>
-                  <ThemedText style={styles.priceText}>
-                    {item.price} Points
-                  </ThemedText>
-                </View>
-              </TouchableOpacity>
-            ))}
+            .map(renderItem)}
         </View>
       </ScrollView>
+
       <ConfettiCannon
-        ref={confettiRef}
         count={50}
         origin={{ x: -10, y: 0 }}
         fallSpeed={2500}
-        explosionSpeed={350}
         fadeOut={true}
-        colors={["#ff6f00", "#ff8f00", "#ffa000", "#ffb300"]} // Orange/Yellow confetti
+        autoStart={false}
+        ref={confettiRef}
       />
     </View>
   );

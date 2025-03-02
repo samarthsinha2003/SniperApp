@@ -80,6 +80,42 @@ export const snipesService = {
     return snipeDoc.id;
   },
 
+  async handleSnipeHit(snipeId: string): Promise<void> {
+    const snipeRef = doc(db, "snipes", snipeId);
+    const snipeDoc = await getDoc(snipeRef);
+
+    if (!snipeDoc.exists()) {
+      throw new Error("Snipe not found");
+    }
+
+    const snipe = snipeDoc.data() as Snipe;
+    const targetRef = doc(db, "users", snipe.targetId);
+    const targetDoc = await getDoc(targetRef);
+
+    if (!targetDoc.exists()) {
+      throw new Error("Target user not found");
+    }
+
+    // Check if target has an active shield
+    const hasShield = await powerupsService.checkActivePowerup(snipe.targetId, "shield");
+    
+    if (hasShield) {
+      // If shield is active, consume it and don't apply other effects
+      await powerupsService.consumePowerup(snipe.targetId, "shield");
+      await updateDoc(snipeRef, {
+        status: "completed",
+        shieldBlocked: true
+      });
+    } else {
+      // No shield, process snipe normally with other powerups
+      const points = await powerupsService.calculatePoints(snipe.sniperId, snipe.targetId, 1);
+      await updateDoc(snipeRef, {
+        status: "completed",
+        points
+      });
+    }
+  },
+
   async dodgeSnipe(snipeId: string, targetId: string): Promise<boolean> {
     const snipeRef = doc(db, "snipes", snipeId);
     const userRef = doc(db, "users", targetId);
@@ -114,24 +150,15 @@ export const snipesService = {
       throw new Error("Dodge window has expired");
     }
 
-    // Check for shield powerup
-    const hasShield = snipe.powerups?.shield || false;
-    let pointsToAdd = 5; // Base points for successful dodge
-
-    if (hasShield) {
-      pointsToAdd = 10; // More points for shielded dodge
-    }
-
-    // Update snipe status to dodged
+    // Update snipe status to dodged - no powerups are consumed on successful dodge
     await updateDoc(snipeRef, {
-      status: "dodged",
-      ...(hasShield && { "powerups.shield": true }), // Keep shield status true if they had it
+      status: "dodged"
     });
 
     // Award points for successful dodge
     const currentPoints = userData.points || 0;
     await updateDoc(userRef, {
-      points: currentPoints + pointsToAdd,
+      points: currentPoints + 1
     });
 
     return true;

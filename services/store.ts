@@ -99,25 +99,23 @@ export const store = {
 
         const userData = userDoc.data();
         const currentPoints = userData?.points || 0;
+        const currentInventory = userData?.inventory || [];
+
+        // Only check for duplicate items for logos/crosshairs, NOT powerups
+        if (item.type === "crosshair" || item.type === "logo") {
+          const hasItem = currentInventory.some(
+            (invItem: any) => invItem.id === item.id
+          );
+          if (hasItem) {
+            throw new Error("You already own this item");
+          }
+        }
 
         if (currentPoints < item.price) {
           throw new Error("Insufficient points");
         }
 
         newPoints = currentPoints - item.price;
-
-        // Get current inventory
-        const currentInventory = userData?.inventory || [];
-
-        // For powerups, check if unused one exists
-        if (item.type === "powerup") {
-          const hasUnusedPowerup = currentInventory.some(
-            (invItem: any) => invItem.id === item.id && !invItem.used
-          );
-          if (hasUnusedPowerup) {
-            throw new Error("You already have an unused powerup of this type");
-          }
-        }
 
         // Add new item to inventory
         const updateData: any = {
@@ -145,7 +143,7 @@ export const store = {
       return true;
     } catch (error) {
       console.error("Purchase failed:", error);
-      return false;
+      throw error; // Changed to throw error instead of returning false to propagate the error message
     }
   },
 
