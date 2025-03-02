@@ -244,7 +244,7 @@ export default function CameraScreen() {
             });
 
             // Get final points value from snipe
-            const points = snipeData.points || 10; // Default to 10 if not set
+            const points = snipeData.points || 1; // Default to 10 if not set
             await groupsService.updatePoints(target.groupId, user.id, points);
             Alert.alert("Success", `You earned ${points} points!`);
 
@@ -306,7 +306,10 @@ export default function CameraScreen() {
         <>
           <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
           <View style={styles.topButtons}>
-            <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
+            <TouchableOpacity
+              style={styles.flipButton}
+              onPress={toggleCameraType}
+            >
               <Ionicons name="camera-reverse" size={30} color="white" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
@@ -314,7 +317,10 @@ export default function CameraScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.captureContainer}>
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={takePicture}
+            >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
           </View>
