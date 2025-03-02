@@ -23,20 +23,22 @@ export default function DodgeAlert({
   onDodged,
   onExpired,
 }: DodgeAlertProps) {
-  const [timeLeft, setTimeLeft] = useState(20);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Calculate initial time left
+  // Calculate initial time left without setState
+  const initialTimeLeft = (() => {
     const now = new Date();
     const snipeTime = snipe.timestamp.toDate();
-    const initialTimeLeft = Math.max(
+    return Math.max(
       0,
       20 - Math.floor((now.getTime() - snipeTime.getTime()) / 1000)
     );
-    setTimeLeft(initialTimeLeft);
+  })();
 
-    // Start countdown
+  const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
+
+  useEffect(() => {
+    // Start countdown only after initial render
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -49,7 +51,7 @@ export default function DodgeAlert({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [snipe]);
+  }, []);
 
   const handleDodge = async () => {
     setLoading(true);

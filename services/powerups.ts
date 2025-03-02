@@ -59,7 +59,7 @@ export const powerupsService = {
     const newPowerup: ActivePowerup = {
       id: powerupId,
       type,
-      remainingUses: type === "half_points" ? 3 : 1, // Specifically 3 uses for half_points
+      remainingUses: type === "half_points" ? 3 : type === "double_points" ? 8 : 1,
       activatedAt: Date.now(),
     };
 

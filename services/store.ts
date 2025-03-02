@@ -123,23 +123,45 @@ export const store = {
           throw new Error("Insufficient points");
         }
 
-        // Update points
-        transaction.update(userRef, {
-          points: currentPoints - item.price,
-          // Add item to inventory only if it's a logo
-          ...(item.type === 'logo' ? {
-            inventory: arrayUnion({
-              id: item.id,
-              type: item.type,
-              purchasedAt: serverTimestamp()
-            })
-          } : {})
-        });
+        newPoints = currentPoints - item.price;
 
-        success = true;
+        // Get current inventory
+        const currentInventory = userData?.inventory || [];
+
+        // For powerups, check if unused one exists
+        if (item.type === "powerup") {
+          const hasUnusedPowerup = currentInventory.some(
+            (invItem: any) => invItem.id === item.id && !invItem.used
+          );
+          if (hasUnusedPowerup) {
+            throw new Error("You already have an unused powerup of this type");
+          }
+        }
+
+        // Add new item to inventory
+        const updateData: any = {
+          points: newPoints,
+          inventory: [
+            ...currentInventory,
+            {
+              id: item.id,
+              purchasedAt: Date.now(),
+              used: false,
+            },
+          ],
+        };
+
+        // If it's a logo item, set it as the active logo
+        if (item.type === "logo") {
+          updateData.activeLogo = item.id;
+        }
+
+        transaction.update(userRef, updateData);
       });
 
-      return success;
+      // After successful transaction, update points in all groups
+      await this.updateGroupPoints(userId, newPoints);
+      return true;
     } catch (error) {
       console.error("Failed to purchase item:", error);
       if (error instanceof Error && error.message === "Item already owned") {
@@ -180,24 +202,14 @@ export const store = {
           activeLogo: itemId,
         });
       } else if (storeItem.type === "powerup" && storeItem.effect) {
-        // For powerups, activate the powerup first
-        await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
-
-        // Then mark as used in inventory
-        const updatedInventory = [...inventory];
-        updatedInventory[itemIndex] = {
-          ...updatedInventory[itemIndex],
-          used: true,
-        };
-
-        await updateDoc(userRef, {
-          inventory: updatedInventory,
-        });
-      } else if (storeItem.type === "powerup" && storeItem.effect) {
-        // For powerups, try to activate it
         try {
-          await powerupsService.activatePowerup(userId, itemId, storeItem.effect);
-          
+          // For powerups, activate the powerup first
+          await powerupsService.activatePowerup(
+            userId,
+            itemId,
+            storeItem.effect
+          );
+
           // Mark item as used only after successful activation
           const updatedInventory = [...inventory];
           updatedInventory[itemIndex] = {
