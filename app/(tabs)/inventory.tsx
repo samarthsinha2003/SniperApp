@@ -71,7 +71,7 @@ export default function InventoryScreen() {
             }
           } catch (error) {
             console.error("Failed to use item:", error);
-            Alert.alert("Error", "Failed to use item");
+            Alert.alert("Error", "Item already in use");
           }
         },
       },
