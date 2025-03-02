@@ -30,36 +30,19 @@ export const powerupsService = {
     const currentPowerups: ActivePowerup[] =
       userDoc.data()?.activePowerups || [];
 
-    // Get duration from shop item
-    const shopItem = shopItems.find((item) => item.id === powerupId);
-    if (!shopItem) throw new Error("Powerup not found in shop");
-
-    const duration = shopItem.duration || 1;
-
     // Check if user already has an active powerup of this type
     const hasActivePowerup = currentPowerups.some(
       (p) => p.type === type && p.remainingUses > 0
     );
     if (hasActivePowerup) {
-      throw new Error(`You already have an active ${type} powerup`);
+      throw new Error("Item already in use.");
     }
 
     // Add new powerup with appropriate remaining uses
-    const getRemainingUses = (powerupType: ActivePowerup["type"]) => {
-      switch (powerupType) {
-        case "double_points":
-          return 2;
-        case "half_points":
-          return 3;
-        default:
-          return 1;
-      }
-    };
-
     const newPowerup: ActivePowerup = {
       id: powerupId,
       type,
-      remainingUses: duration,
+      remainingUses: type === "half_points" ? 3 : 1, // Specifically 3 uses for half_points
       activatedAt: Date.now(),
     };
 
