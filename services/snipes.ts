@@ -46,13 +46,15 @@ export const snipesService = {
       sniperId,
       "double_points"
     );
-    const hasHalfPoints = await powerupsService.checkActivePowerup(
-      targetId,
-      "half_points"
-    ); // Target might have half points active
     const hasShield = await powerupsService.checkActivePowerup(
       targetId,
       "shield"
+    );
+    
+    // Get target's powerups to check for half_points
+    const targetPowerups = await powerupsService.getActivePowerups(targetId);
+    const hasHalfPoints = targetPowerups.some(
+      (p) => p.type === "half_points" && p.remainingUses > 0
     );
 
     // Calculate base points (1 for successful snipe)
@@ -63,6 +65,7 @@ export const snipesService = {
     }
     if (hasHalfPoints) {
       points *= 0.5;
+      // Consume one use of half_points from target when they get sniped
       await powerupsService.consumePowerup(targetId, "half_points");
     }
 

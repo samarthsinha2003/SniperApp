@@ -28,11 +28,30 @@ export const powerupsService = {
     const currentPowerups: ActivePowerup[] =
       userDoc.data()?.activePowerups || [];
 
-    // Add new powerup
+    // Check if user already has an active powerup of this type
+    const hasActivePowerup = currentPowerups.some(
+      (p) => p.type === type && p.remainingUses > 0
+    );
+    if (hasActivePowerup) {
+      throw new Error(`You already have an active ${type} powerup`);
+    }
+
+    // Add new powerup with appropriate remaining uses
+    const getRemainingUses = (powerupType: ActivePowerup["type"]) => {
+      switch (powerupType) {
+        case "double_points":
+          return 2;
+        case "half_points":
+          return 3;
+        default:
+          return 1;
+      }
+    };
+
     const newPowerup: ActivePowerup = {
       id: powerupId,
       type,
-      remainingUses: type === "double_points" ? 2 : 1, // double points lasts 2 snipes, others 1
+      remainingUses: getRemainingUses(type),
       activatedAt: Date.now(),
     };
 
