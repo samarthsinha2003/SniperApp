@@ -9,6 +9,7 @@ import {
   Animated,
   GestureResponderEvent,
   PanResponderGestureState,
+  Platform,
 } from "react-native";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as MediaLibrary from "expo-media-library";
@@ -108,8 +109,21 @@ export default function ImageEditor({
         { format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 }
       );
 
-      const asset = await MediaLibrary.createAssetAsync(result.uri);
-      onSave(asset.uri);
+      if (Platform.OS === "web") {
+        // On web, create a download link and trigger it
+        const downloadUri = result.uri;
+        const link = document.createElement("a");
+        link.href = downloadUri;
+        link.download = `snipe-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        onSave(downloadUri);
+      } else {
+        // On native platforms, create a media library asset
+        const asset = await MediaLibrary.createAssetAsync(result.uri);
+        onSave(asset.uri);
+      }
     } catch (error) {
       console.error("Error saving edited image:", error);
     }
@@ -146,7 +160,9 @@ export default function ImageEditor({
                 : require("../assets/images/tempsniperlogo.png")
             }
             style={[
-              activeLogo && activeLogo !== 'default' ? styles.sniperScope : styles.redTintedScope
+              activeLogo && activeLogo !== "default"
+                ? styles.sniperScope
+                : styles.redTintedScope,
             ]}
           />
         </Animated.View>

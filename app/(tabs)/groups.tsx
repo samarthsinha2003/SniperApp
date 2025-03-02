@@ -21,6 +21,7 @@ import * as Clipboard from "expo-clipboard";
 import { JoinGroupDialog } from "../../components/JoinGroupDialog";
 import { CreateGroupDialog } from "../../components/CreateGroupDialog";
 import { LinearGradient } from "expo-linear-gradient";
+import CountdownTimer from "../../components/CountdownTimer";
 
 export default function GroupsScreen() {
   const { user, signOut } = useAuth();
@@ -340,7 +341,47 @@ export default function GroupsScreen() {
                       )?.name || ""}{" "}
                       of lying about a snipe!
                     </ThemedText>
-                    {group.activeAccusation &&
+
+                    {/* Show countdown if all votes are in */}
+                    {group.activeAccusation?.countdownStartTime && (
+                      <>
+                        <CountdownTimer
+                          endTime={
+                            new Date(
+                              group.activeAccusation.countdownStartTime +
+                                3600000
+                            )
+                          }
+                          onComplete={() =>
+                            groupsService.checkAccusationCountdown(group.id)
+                          }
+                          variant="accusation"
+                          totalDuration={3600000} // 1 hour in milliseconds
+                        />
+                        {group.activeAccusation.votes?.[user?.id] && (
+                          <TouchableOpacity
+                            style={[styles.voteButton, styles.retractButton]}
+                            onPress={async () => {
+                              try {
+                                await groupsService.retractVote(
+                                  group.id,
+                                  user.id
+                                );
+                              } catch (error: any) {
+                                Alert.alert("Error", error.message);
+                              }
+                            }}
+                          >
+                            <ThemedText style={styles.voteButtonText}>
+                              Retract Vote
+                            </ThemedText>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+
+                    {/* Show vote buttons if countdown hasn't started */}
+                    {!group.activeAccusation.countdownStartTime &&
                       user.id !== group.activeAccusation.accusedId &&
                       !group.activeAccusation.votes?.[user.id] && (
                         <View style={[styles.voteButtonsContainer]}>
@@ -382,7 +423,8 @@ export default function GroupsScreen() {
                           </TouchableOpacity>
                         </View>
                       )}
-                    {group.activeAccusation &&
+                    {/* Show vote status if voted but countdown hasn't started */}
+                    {!group.activeAccusation.countdownStartTime &&
                       user &&
                       group.activeAccusation.votes?.[user.id] !== undefined && (
                         <ThemedText style={styles.votedText}>
@@ -725,6 +767,16 @@ const styles = StyleSheet.create({
   },
   voteNo: {
     backgroundColor: "#f44336",
+  },
+  retractButton: {
+    backgroundColor: "#ff6f00",
+    alignSelf: "center",
+    marginTop: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    minWidth: 100,
+    alignItems: "center",
   },
   voteButtonText: {
     color: "white",
