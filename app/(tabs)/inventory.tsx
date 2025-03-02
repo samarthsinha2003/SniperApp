@@ -119,6 +119,34 @@ export default function InventoryScreen() {
     );
   };
 
+  const handleResetLogo = async () => {
+    if (!user?.id) return;
+
+    Alert.alert(
+      "Reset Logo",
+      "Are you sure you want to reset to the default logo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          onPress: async () => {
+            try {
+              const success = await store.setDefaultLogo(user.id);
+              if (success) {
+                Alert.alert("Success", "Logo reset to default!");
+              } else {
+                Alert.alert("Error", "Failed to reset logo");
+              }
+            } catch (error) {
+              console.error("Failed to reset logo:", error);
+              Alert.alert("Error", "Failed to reset logo");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderInventorySection = (type: "crosshair" | "powerup" | "logo") => {
     if (!inventory) return null;
 
@@ -131,13 +159,32 @@ export default function InventoryScreen() {
 
     return (
       <>
-        <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
-          {type === "crosshair"
-            ? "Crosshairs"
-            : type === "powerup"
-            ? "Power-ups"
-            : "Sniper Logos"}
-        </ThemedText>
+        <View style={styles.sectionHeader}>
+          <ThemedText style={[styles.sectionTitle, { color: "#fff" }]}>
+            {type === "crosshair"
+              ? "Crosshairs"
+              : type === "powerup"
+              ? "Power-ups"
+              : "Sniper Logos"}
+          </ThemedText>
+          {type === "logo" && (
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleResetLogo}
+            >
+              <LinearGradient
+                colors={["#6366f1", "#4f46e5"]}
+                style={styles.resetButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <ThemedText style={styles.resetButtonText}>
+                  Reset to Default
+                </ThemedText>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.itemsGrid}>
           {items.map((item) => {
             const storeItem = shopItems.find(
@@ -197,6 +244,34 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  resetButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  resetButtonGradient: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  resetButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   centered: {
     justifyContent: "center",

@@ -31,6 +31,18 @@ export interface UserInventory {
 }
 
 export const store = {
+  async setDefaultLogo(userId: string): Promise<boolean> {
+    const userRef = doc(db, "users", userId);
+    try {
+      await updateDoc(userRef, {
+        activeLogo: "default", // null means use the default logo
+      });
+      return true;
+    } catch (error) {
+      console.error("Failed to reset logo:", error);
+      return false;
+    }
+  },
   async getUserInventory(userId: string): Promise<UserInventory> {
     const userDoc = await getDoc(doc(db, "users", userId));
     if (!userDoc.exists()) {
@@ -99,7 +111,7 @@ export const store = {
             id: item.id,
             purchasedAt: Date.now(),
             used: false,
-          })
+          }),
         };
 
         // If it's a logo item, set it as the active logo
