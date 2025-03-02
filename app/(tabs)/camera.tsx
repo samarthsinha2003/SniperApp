@@ -33,6 +33,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import ImageEditor from "../../components/ImageEditor";
 
 export default function CameraScreen() {
   const { user, signOut } = useAuth();
@@ -43,6 +44,7 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
   const [availableTargets, setAvailableTargets] = useState<Target[]>([]);
   const [activeSnipe, setActiveSnipe] = useState<Snipe | null>(null);
   const [countdownEndTime, setCountdownEndTime] = useState<Date | null>(null);
@@ -268,13 +270,9 @@ export default function CameraScreen() {
 
       if (photo) {
         console.log("Picture taken:", photo.uri);
-        // Save the captured image to the gallery
-        const asset = await MediaLibrary.createAssetAsync(photo.uri);
-        console.log("Photo saved at:", asset.uri);
-
-        // Store the photo URI and show the target selection modal
-        setLastPhotoUri(asset.uri);
-        setModalVisible(true);
+        // Show the editor instead of saving directly
+        setLastPhotoUri(photo.uri);
+        setShowEditor(true);
       } else {
         console.error("Failed to take picture, photo is undefined.");
         Alert.alert("Error", "Failed to take picture");
@@ -285,40 +283,55 @@ export default function CameraScreen() {
     }
   }
 
+  const handleEditorSave = async (editedUri: string) => {
+    setShowEditor(false);
+    setLastPhotoUri(editedUri);
+    setModalVisible(true);
+  };
+
+  const handleEditorCancel = () => {
+    setShowEditor(false);
+    setLastPhotoUri(null);
+  };
+
   return (
     <View style={styles.container}>
-      {/* Attach ref to CameraView */}
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-
-      <View style={styles.topButtons}>
-        <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
-          <Ionicons name="camera-reverse" size={30} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
-          <MaterialIcons name="logout" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.captureContainer}>
-        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-          <View style={styles.captureButtonInner} />
-        </TouchableOpacity>
-      </View>
-
+      {showEditor && lastPhotoUri ? (
+        <ImageEditor
+          imageUri={lastPhotoUri}
+          onSave={handleEditorSave}
+          onCancel={handleEditorCancel}
+        />
+      ) : (
+        <>
+          <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+          <View style={styles.topButtons}>
+            <TouchableOpacity style={styles.flipButton} onPress={toggleCameraType}>
+              <Ionicons name="camera-reverse" size={30} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
+              <MaterialIcons name="logout" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.captureContainer}>
+            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+              <View style={styles.captureButtonInner} />
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
       <TargetSelectionModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSelectTarget={handleTargetSelection}
         targets={availableTargets}
       />
-
       {countdownEndTime && (
         <CountdownTimer
           endTime={countdownEndTime}
           onComplete={() => setCountdownEndTime(null)}
         />
       )}
-
       {activeSnipe && (
         <DodgeAlert
           snipe={activeSnipe}
