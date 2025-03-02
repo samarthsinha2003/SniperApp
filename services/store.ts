@@ -85,39 +85,20 @@ export const store = {
     }
   },
 
-  async isItemOwned(userId: string, itemId: string): Promise<boolean> {
-    const userRef = doc(db, "users", userId);
-    try {
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) return false;
-      
-      const inventory = userDoc.data()?.inventory || [];
-      return inventory.some((item: any) => item.id === itemId);
-    } catch (error) {
-      console.error("Failed to check item ownership:", error);
-      return false;
-    }
-  },
-
   async purchaseItem(userId: string, item: StoreItem): Promise<boolean> {
     const userRef = doc(db, "users", userId);
 
     try {
-      // Only check ownership for logo items
-      if (item.type === 'logo') {
-        const isOwned = await this.isItemOwned(userId, item.id);
-        if (isOwned) {
-          throw new Error("Item already owned");
-        }
-      }
-
-      let success = false;
+      let newPoints = 0;
       await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) throw new Error("User not found");
+
+        if (!userDoc.exists()) {
+          throw new Error("User not found");
+        }
 
         const userData = userDoc.data();
-        const currentPoints = userData.points || 0;
+        const currentPoints = userData?.points || 0;
 
         if (currentPoints < item.price) {
           throw new Error("Insufficient points");
@@ -163,10 +144,7 @@ export const store = {
       await this.updateGroupPoints(userId, newPoints);
       return true;
     } catch (error) {
-      console.error("Failed to purchase item:", error);
-      if (error instanceof Error && error.message === "Item already owned") {
-        throw error;
-      }
+      console.error("Purchase failed:", error);
       return false;
     }
   },
