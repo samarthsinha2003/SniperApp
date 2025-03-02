@@ -85,48 +85,66 @@ export const store = {
     }
   },
 
+  async isItemOwned(userId: string, itemId: string): Promise<boolean> {
+    const userRef = doc(db, "users", userId);
+    try {
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) return false;
+      
+      const inventory = userDoc.data()?.inventory || [];
+      return inventory.some((item: any) => item.id === itemId);
+    } catch (error) {
+      console.error("Failed to check item ownership:", error);
+      return false;
+    }
+  },
+
   async purchaseItem(userId: string, item: StoreItem): Promise<boolean> {
     const userRef = doc(db, "users", userId);
 
     try {
-      let newPoints = 0;
+      // Only check ownership for logo items
+      if (item.type === 'logo') {
+        const isOwned = await this.isItemOwned(userId, item.id);
+        if (isOwned) {
+          throw new Error("Item already owned");
+        }
+      }
+
+      let success = false;
       await runTransaction(db, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-
-        if (!userDoc.exists()) {
-          throw new Error("User not found");
-        }
+        if (!userDoc.exists()) throw new Error("User not found");
 
         const userData = userDoc.data();
-        const currentPoints = userData?.points || 0;
+        const currentPoints = userData.points || 0;
 
         if (currentPoints < item.price) {
           throw new Error("Insufficient points");
         }
 
-        newPoints = currentPoints - item.price;
-        const updateData: any = {
-          points: newPoints,
-          inventory: arrayUnion({
-            id: item.id,
-            purchasedAt: Date.now(),
-            used: false,
-          }),
-        };
+        // Update points
+        transaction.update(userRef, {
+          points: currentPoints - item.price,
+          // Add item to inventory only if it's a logo
+          ...(item.type === 'logo' ? {
+            inventory: arrayUnion({
+              id: item.id,
+              type: item.type,
+              purchasedAt: serverTimestamp()
+            })
+          } : {})
+        });
 
-        // If it's a logo item, set it as the active logo
-        if (item.type === "logo") {
-          updateData.activeLogo = item.id;
-        }
-
-        transaction.update(userRef, updateData);
+        success = true;
       });
 
-      // After successful transaction, update points in all groups
-      await this.updateGroupPoints(userId, newPoints);
-      return true;
+      return success;
     } catch (error) {
-      console.error("Purchase failed:", error);
+      console.error("Failed to purchase item:", error);
+      if (error instanceof Error && error.message === "Item already owned") {
+        throw error;
+      }
       return false;
     }
   },
