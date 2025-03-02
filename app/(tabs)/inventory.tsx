@@ -12,6 +12,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../contexts/AuthContext";
 import { store, UserInventory, StoreItem } from "../../services/store";
+import { powerupsService, ActivePowerup } from "../../services/powerups";
 import { shopItems } from "./shop";
 import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../../config/firebase";
@@ -148,12 +149,34 @@ export default function InventoryScreen() {
     );
   };
 
+  const [activePowerups, setActivePowerups] = useState<ActivePowerup[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadActivePowerups = async () => {
+      const powerups = await powerupsService.getActivePowerups(user.id);
+      setActivePowerups(powerups);
+    };
+
+    loadActivePowerups();
+  }, [user?.id]);
+
   const renderInventorySection = (type: "crosshair" | "powerup" | "logo") => {
     if (!inventory) return null;
 
+    // Filter out used powerups that have no remaining uses
     const items = inventory.items.filter((item) => {
       const storeItem = shopItems.find((si: StoreItem) => si.id === item.id);
-      return storeItem?.type === type;
+      if (!storeItem) return false;
+
+      if (storeItem.type === "powerup" && item.used) {
+        // Check if powerup still has remaining uses
+        const activePowerup = activePowerups.find((p) => p.id === item.id);
+        return activePowerup && activePowerup.remainingUses > 0;
+      }
+
+      return storeItem.type === type;
     });
 
     if (items.length === 0) return null;
