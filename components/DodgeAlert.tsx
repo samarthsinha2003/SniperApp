@@ -23,7 +23,7 @@ export default function DodgeAlert({
   onDodged,
   onExpired,
 }: DodgeAlertProps) {
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(20);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
