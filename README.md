@@ -1,10 +1,3 @@
-<!--
-Creators of Scop'd
-Dominick Dickerson (Co-creator of the idea & Creator of the execution)
-Samarth Sinha (Co-creator of the idea & Creator of the execution)
-Shreya Ramani (Co-creator of the idea) 
--->
-
 # Sniper App
 
 A mobile application where users can "snipe" their friends by taking photos and earning points in a competitive, social environment.
@@ -93,3 +86,9 @@ src/
 - Local photo storage for privacy
 - Points system protected by server-side rules
 
+<!--
+Creators of Scop'd
+Dominick Dickerson (Co-creator of the idea & Creator of the execution)
+Samarth Sinha (Co-creator of the idea & Creator of the execution)
+Shreya Ramani (Co-creator of the idea) 
+-->
